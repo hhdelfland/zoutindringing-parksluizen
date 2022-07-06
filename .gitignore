@@ -4,6 +4,7 @@ Data_EC/
 *.xlsx
 *.html
 *.png
+teams_path
 
 
 # Byte-compiled / optimized / DLL files
