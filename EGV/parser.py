@@ -13,21 +13,24 @@ import os.path
 # data select attached series function
 
 def main():
-    with open(os.path.dirname(__file__) + '/../teams_path') as f:
-        lines = f.readlines()
-    teams_path = lines[0] + '/'
-    locatie = 'parkhaven'
-    path = teams_path + 'telecontrol/'+locatie+'.csv'
-    EGV_res = EGV_reader(path)
-    EGV_db = EGV_res[0]
-    EGV_numcols = EGV_res[1]
-    print(EGV_db.head())
-    print(EGV_numcols)
+    path = EGV_path_maker('parkhaven')
+    egv_res = EGV_reader(path)
+    egv_db = egv_res[0]
+    egv_numcols = egv_res[1]
+    print(egv_db.head())
+    print(egv_numcols)
 
 def EGV_reader(path, delimiter = '\t'):
-    EGV_src = pd.read_table(path,delimiter = delimiter)
-    numeric_cols = EGV_src.columns[2:]
-    return((EGV_src,numeric_cols))
+    egv_src = pd.read_table(path,delimiter = delimiter)
+    numeric_cols = egv_src.columns[2:]
+    return((egv_src,numeric_cols))
+
+def EGV_path_maker(locatie):
+    with open(os.path.dirname(__file__) + '/../teams_path' , encoding='utf-8') as file:
+        lines = file.readlines()
+    teams_path = lines[0] + '/'
+    path = teams_path + 'telecontrol/'+locatie+'.csv'
+    return(path)
 
 
 if __name__ == '__main__':
