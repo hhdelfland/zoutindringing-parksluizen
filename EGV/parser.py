@@ -4,7 +4,7 @@ import os.path
 
 ## TODO
 # data reader function
-# data numeric sep function
+# data to numeric sep function
 # data datetime and index setter
 # data cols to numeric function
 # data remove outliers function
@@ -13,24 +13,39 @@ import os.path
 # data select attached series function
 
 def main():
-    path = EGV_path_maker('parkhaven')
-    egv_res = EGV_reader(path)
+    path = egv_path_maker('parkhaven')
+    print(path)
+
+    egv_res = egv_reader(path)
     egv_db = egv_res[0]
     egv_numcols = egv_res[1]
     print(egv_db.head())
     print(egv_numcols)
 
-def EGV_reader(path, delimiter = '\t'):
+    egv_db = egv_replace_decimal(egv_db, egv_numcols)
+    print(egv_db.head(2))
+    print(egv_db.tail(2))
+
+
+
+def egv_reader(path, delimiter = '\t'):
     egv_src = pd.read_table(path,delimiter = delimiter)
     numeric_cols = egv_src.columns[2:]
     return((egv_src,numeric_cols))
 
-def EGV_path_maker(locatie):
+def egv_path_maker(locatie):
     with open(os.path.dirname(__file__) + '/../teams_path' , encoding='utf-8') as file:
         lines = file.readlines()
     teams_path = lines[0] + '/'
     path = teams_path + 'telecontrol/'+locatie+'.csv'
     return(path)
+
+def egv_replace_decimal(egv_db,numeric_cols,pattern = ',',replace = '.'):
+    egv_db[numeric_cols] = egv_db[numeric_cols].stack().str.replace(pattern,replace).unstack()
+    egv_db = egv_db.drop(egv_db.tail(5).index)
+    return(egv_db)
+
+
 
 
 if __name__ == '__main__':
