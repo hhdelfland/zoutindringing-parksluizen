@@ -35,8 +35,14 @@ def egv_reader(path, delimiter='\t'):
         (1): list of columns (str) that can be interpreted as numeric
     """
     egv_src = pd.read_table(path, delimiter=delimiter)
-    numeric_cols = egv_src.columns[2:]
-    return((egv_src, numeric_cols))
+    return egv_src
+
+
+def egv_get_numeric_cols(egv_db, mode='parse'):
+    if mode == 'load':
+        return egv_db.columns[2:]
+    if mode == 'parse':
+        return egv_db.select_dtypes('number').columns
 
 
 def egv_make_path(locatie):
@@ -139,6 +145,31 @@ def egv_index_datetime(egv_db):
     return egv_db
 
 
+def egv_force_time_step(egv_db, step_size='10min'):
+    """Forces datframe to have a row every 10 minutes
+    by filling with nan
+
+    Parameters
+    ----------
+    egv_db : pandas dataframe
+        dataframe with datetime index
+    step_size : str, optional
+        time fill, should be chosen based
+        on most prevalent timestep in data,
+        by default '10min'
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
+    series_start = egv_db['datetime'][0]
+    series_end = egv_db['datetime'][-1]
+    datetime_range = pd.date_range(series_start, series_end, freq='10min')
+    egv_db = egv_db.reindex(datetime_range, fill_value=np.nan)
+    return egv_db
+
+
 def egv_remove_outliers(egv_db, numeric_cols):
     """Replaces outliers (pending conditions) from numeric columns
     in a pandas dataframe with NaN
@@ -221,14 +252,14 @@ def egv_standard_run(locatie='parkhaven'):
     """
 
     path = egv_make_path(locatie)
-    egv_res = egv_reader(path)
-    egv_db = egv_res[0]
-    numeric_cols = egv_res[1]
+    egv_db = egv_reader(path)
+    numeric_cols = egv_get_numeric_cols(egv_db, mode='load')
     egv_db = egv_replace_decimal(egv_db, numeric_cols)
     egv_db = egv_to_numeric(egv_db, numeric_cols)
     egv_db = egv_remove_outliers(egv_db, numeric_cols)
     egv_db = egv_remove_repeated_sensor_data(egv_db, numeric_cols)
     egv_db = egv_index_datetime(egv_db)
+    egv_db = egv_force_time_step(egv_db)
 
     return egv_db
 
