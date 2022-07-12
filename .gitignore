@@ -5,6 +5,8 @@ Data_EC/
 *.html
 *.png
 teams_path
+settings.json
+.gitignore
 
 
 # Byte-compiled / optimized / DLL files
@@ -145,3 +147,6 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+.vscode/settings.json
+.gitignore
+.vscode/settings.json
