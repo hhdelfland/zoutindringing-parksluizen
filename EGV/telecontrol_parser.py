@@ -13,22 +13,8 @@ import numpy as np
 # data select attached series function
 
 def main():
-    path = egv_make_path(locatie='parkhaven')
-
-    egv_res = egv_reader(path)
-    egv_db = egv_res[0]
-    numeric_cols = egv_res[1]
-
-    egv_db = egv_replace_decimal(egv_db, numeric_cols)
-
-    egv_db = egv_to_numeric(egv_db, numeric_cols)
-
-    egv_db = egv_index_datetime(egv_db)
-
-    egv_db = egv_remove_outliers(egv_db, numeric_cols)
-
-    egv_db = egv_remove_repeated_sensor_data(egv_db, numeric_cols)
-    egv_inspect_ends(egv_db)
+    egv_db = egv_standard_run('parkhaven')
+    egv_inspect_ends(egv_db, 4)
 
 
 def egv_reader(path, delimiter='\t'):
@@ -149,7 +135,7 @@ def egv_index_datetime(egv_db):
     egv_db['datetime'] = pd.to_datetime(
         egv_db['Datum'] + ' ' + egv_db['Tijd (Europe/Amsterdam)'])
     egv_db['maand'] = egv_db['datetime'].dt.strftime('%b')
-    egv_db.set_index('datetime', drop=False)
+    egv_db = egv_db.set_index('datetime', drop=False)
     return egv_db
 
 
@@ -216,6 +202,35 @@ def egv_inspect_ends(egv_db, size=1):
     """
     print(egv_db.head(size))
     print(egv_db.tail(size))
+
+
+def egv_standard_run(locatie='parkhaven'):
+    """wrapper function that runs a standard set
+    of cuntions to load telecontrol data
+
+    Parameters
+    ----------
+    locatie : str, optional
+        physical location of measurements, by default 'parkhaven'
+
+    Returns
+    -------
+    pandas dataframe
+        prepared dataframe with numeric values and datetime
+        columns
+    """
+
+    path = egv_make_path(locatie)
+    egv_res = egv_reader(path)
+    egv_db = egv_res[0]
+    numeric_cols = egv_res[1]
+    egv_db = egv_replace_decimal(egv_db, numeric_cols)
+    egv_db = egv_to_numeric(egv_db, numeric_cols)
+    egv_db = egv_remove_outliers(egv_db, numeric_cols)
+    egv_db = egv_remove_repeated_sensor_data(egv_db, numeric_cols)
+    egv_db = egv_index_datetime(egv_db)
+
+    return egv_db
 
 
 if __name__ == '__main__':
