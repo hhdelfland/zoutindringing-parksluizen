@@ -3,10 +3,12 @@ import telecontrol_parser as tp
 import numpy as np
 
 def main():
-    tsdf = tp.egv_standard_run('parkhaven',remove_flat=False)
+    tsdf = tp.egv_standard_run('parkhaven',remove_flat=True)
     tsdf = tsdf_interpolate_small_gaps(tsdf,12)
     print(tsdf_report_gaps(tsdf, 1))
-    print(tsdf_subset_datasets_dates(tsdf))
+    subset_datasets_dates = tsdf_subset_datasets_dates(tsdf)
+    print(subset_datasets_dates)
+    #print(tsdf_get_datasets(tsdf, subset_datasets_dates))
 
 
 def tsdf_get_timesteps(tsdf):
@@ -74,6 +76,12 @@ def tsdf_subset_datasets_dates(tsdf,timestep = 10):
     measurements = subset_dates['subset_end'] - subset_dates['subset_start']
     subset_dates['measurements'] = (measurements.dt.total_seconds()/600).astype('int')
     return subset_dates
+
+def tsdf_get_datasets(tsdf,subset_datasets_dates):
+    subset_datasets = {}
+    for index, row in subset_datasets_dates.iterrows():
+        subset_datasets[index] = tsdf[row['subset_start']:row['subset_end']]
+    return subset_datasets
 
 
 if __name__ == '__main__':
