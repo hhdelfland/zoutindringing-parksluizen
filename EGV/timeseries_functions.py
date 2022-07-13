@@ -1,12 +1,12 @@
 import pandas as pd
 import telecontrol_parser as tp
-
+import numpy as np
 
 def main():
-    tsdf = tp.egv_standard_run('parkhaven')
-    tsdf_report_gaps(tsdf, 1)
-    tsdf = tsdf_interpolate_small_gaps(tsdf)
-    tsdf_report_gaps(tsdf, 1)
+    tsdf = tp.egv_standard_run('parkhaven',remove_flat=False)
+    tsdf = tsdf_interpolate_small_gaps(tsdf,12)
+    print(tsdf_report_gaps(tsdf, 1))
+    print(tsdf_subset_datasets_dates(tsdf))
 
 
 def tsdf_get_timesteps(tsdf):
@@ -35,7 +35,7 @@ def tsdf_report_gaps(tsdf, size=6):
     mask = tsdf[respective_col].isna()
     d = tsdf.index.to_series()[mask].groupby(
         (~mask).cumsum()[mask]).agg(['first', 'size'])
-    print(d[d['size'] > size])
+    return(d[d['size'] > size])
 
 
 def tsdf_interpolate_small_gaps(tsdf, max_gapsize=6):
@@ -55,6 +55,25 @@ def tsdf_interpolate_small_gaps(tsdf, max_gapsize=6):
     tsdf_interpolated[c] = tsdf_interpolated.loc[~x, c]
     tsdf[numeric_cols] = tsdf_interpolated
     return tsdf
+
+
+def tsdf_subset_datasets_dates(tsdf,timestep = 10):
+    gaps = tsdf_report_gaps(tsdf,1)
+    minutes = timestep*(gaps['size']-1)
+    offset = pd.to_timedelta(minutes, unit ='m')
+    gaps['end'] = gaps['first'] + offset
+    last_dates = gaps['first'] - pd.to_timedelta(timestep, unit ='m')
+    first_dates = gaps['end'] + pd.to_timedelta(timestep, unit ='m')
+    subset_dates = pd.concat([first_dates,last_dates],axis=1)
+    subset_dates.columns = ['subset_start','subset_end']
+    subset_dates.loc[len(subset_dates)] = [np.nan,np.nan]
+    subset_dates['subset_start'] = subset_dates['subset_start'].shift(1)
+    subset_dates = subset_dates.reset_index(drop = True)
+    subset_dates.loc[0,'subset_start'] = (tsdf.index[0])
+    subset_dates.loc[len(subset_dates)-1,'subset_end'] = (tsdf.index[-1])
+    measurements = subset_dates['subset_end'] - subset_dates['subset_start']
+    subset_dates['measurements'] = (measurements.dt.total_seconds()/600).astype('int')
+    return subset_dates
 
 
 if __name__ == '__main__':

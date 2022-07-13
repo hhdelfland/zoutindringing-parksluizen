@@ -196,6 +196,7 @@ def egv_remove_outliers(egv_db, numeric_cols):
 
 
 def egv_remove_repeated_sensor_data(egv_db, numeric_cols):
+    # IMPLEMENT LESS STRICT OPTION!
     """Sets row per designated numeric columns to NaN if it equals
     previous value in order to remove 'flat lines' from curves
     due to faulty sensor data
@@ -235,7 +236,7 @@ def egv_inspect_ends(egv_db, size=1):
     print(egv_db.tail(size))
 
 
-def egv_standard_run(locatie='parkhaven'):
+def egv_standard_run(locatie='parkhaven',remove_flat = True):
     """wrapper function that runs a standard set
     of cuntions to load telecontrol data
 
@@ -257,7 +258,8 @@ def egv_standard_run(locatie='parkhaven'):
     egv_db = egv_replace_decimal(egv_db, numeric_cols)
     egv_db = egv_to_numeric(egv_db, numeric_cols)
     egv_db = egv_remove_outliers(egv_db, numeric_cols)
-    egv_db = egv_remove_repeated_sensor_data(egv_db, numeric_cols)
+    if remove_flat:
+        egv_db = egv_remove_repeated_sensor_data(egv_db, numeric_cols)
     egv_db = egv_index_datetime(egv_db)
     egv_db = egv_force_time_step(egv_db)
 
