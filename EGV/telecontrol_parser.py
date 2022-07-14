@@ -189,9 +189,12 @@ def egv_remove_outliers(egv_db, numeric_cols):
         dataframe indexed by datetime containing EGV and
         temperature values with datetime related columns
     """
+    pd.options.mode.chained_assignment = None
     for col in numeric_cols:
         egv_db[col][egv_db[col] >= 100] = np.nan
-        egv_db[col][egv_db[col] < 0] = np.nan
+        if not('[°C]' in col):
+            egv_db[col][egv_db[col] < 0] = np.nan
+    pd.options.mode.chained_assignment = 'warn'
     return egv_db
 
 
@@ -245,6 +248,8 @@ def egv_inspect_ends(egv_db, size=1):
     """
     print(egv_db.head(size))
     print(egv_db.tail(size))
+    with pd.option_context('display.max_columns', None):
+        print(egv_db.describe())
 
 
 def egv_standard_run(locatie='parkhaven', threshold=1):

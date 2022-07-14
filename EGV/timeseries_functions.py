@@ -4,7 +4,7 @@ import numpy as np
 
 
 def main():
-    tsdf = tp.egv_standard_run(locatie='parkhaven', threshold=12)
+    tsdf = tp.egv_standard_run(locatie='parkhaven', threshold=24)
     tsdf = tsdf_interpolate_small_gaps(tsdf, 12)
     print(tsdf_report_gaps(tsdf, 1))
     subset_datasets_dates = tsdf_subset_datasets_dates(tsdf)
@@ -85,6 +85,16 @@ def tsdf_get_datasets(tsdf, subset_datasets_dates):
     for index, row in subset_datasets_dates.iterrows():
         subset_datasets[index] = tsdf[row['subset_start']:row['subset_end']]
     return subset_datasets
+
+
+def tsdf_standard_run(locatie='parkhaven', threshold=0, interpolate=12):
+    tsdf = tp.egv_standard_run(locatie=locatie, threshold=threshold)
+    tsdf = tsdf_interpolate_small_gaps(tsdf, interpolate)
+    print(tsdf_report_gaps(tsdf, 1))
+    subset_datasets_dates = tsdf_subset_datasets_dates(tsdf)
+    print(subset_datasets_dates)
+    datasets = tsdf_get_datasets(tsdf, subset_datasets_dates)
+    return datasets
 
 
 if __name__ == '__main__':
