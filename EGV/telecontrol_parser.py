@@ -195,7 +195,7 @@ def egv_remove_outliers(egv_db, numeric_cols):
     return egv_db
 
 
-def egv_remove_repeated_sensor_data(egv_db, numeric_cols,threshold):
+def egv_remove_repeated_sensor_data(egv_db, numeric_cols, threshold):
     """Sets row per designated numeric columns to NaN if it equals
     previous value in order to remove 'flat lines' from curves
     due to faulty sensor data
@@ -209,7 +209,7 @@ def egv_remove_repeated_sensor_data(egv_db, numeric_cols,threshold):
         list of column names that contain values in the dataframe that
         can be transfromed into numeric values
     threshold : int
-        size necessary for repeating chunks to be set to NaN. 
+        size necessary for repeating chunks to be set to NaN.
         if 0 then no repeating chunks will be set to NaN
         if 1 then consecutive duplicates will be set to NaN
         if >1 then chunks of data that are repeating for size
@@ -247,7 +247,7 @@ def egv_inspect_ends(egv_db, size=1):
     print(egv_db.tail(size))
 
 
-def egv_standard_run(locatie='parkhaven',threshold=1):
+def egv_standard_run(locatie='parkhaven', threshold=1):
     """wrapper function that runs a standard set
     of cuntions to load telecontrol data
 
@@ -270,7 +270,8 @@ def egv_standard_run(locatie='parkhaven',threshold=1):
     egv_db = egv_to_numeric(egv_db, numeric_cols)
     egv_db = egv_remove_outliers(egv_db, numeric_cols)
     if threshold > 0:
-        egv_db = egv_remove_repeated_sensor_data(egv_db, numeric_cols,threshold = threshold)
+        egv_db = egv_remove_repeated_sensor_data(
+            egv_db, numeric_cols, threshold=threshold)
     egv_db = egv_index_datetime(egv_db)
     egv_db = egv_force_time_step(egv_db)
 
