@@ -26,11 +26,13 @@ def main():
                ['2021-01-01', '2021-12-31'], ['2022-01-01', '2022-12-31'],
                ['2015-01-01', '2022-12-31']
                )
-    plot_TS(locatie, egv_db, numeric_cols, subsets)
+    # plot_TS(locatie, egv_db, numeric_cols, subsets)
+    # plot_TS_violin(locatie, egv_db, numeric_cols)
+    plot_TS_quantiles(locatie, egv_db, numeric_cols)
 
 
 def initialize_params(locatie):
-    with open('teams_path') as f:
+    with open('zoutindringing-parksluizen-1/teams_path') as f:
         lines = f.readlines()
     teams_path = lines[0] + '/'
     isExist = os.path.exists(teams_path+'plots/' + locatie)
@@ -66,6 +68,47 @@ def plot_TS(locatie, egv_db, numeric_cols, subsets=None):
         plot_int.write_image(teams_path+"plots/" +
                              locatie + '/' + locatie +
                              subset[0] + '_' + subset[1] + ".png")
+
+
+def plot_TS_violin(locatie, egv_db, numeric_cols):
+    my_dpi, teams_path = initialize_params(locatie)
+    plot2 = plotly.express.violin(
+        egv_db, x='maand', y=numeric_cols[1],
+        points=False,
+        title='EGV verdeling per maand op locatie: '+locatie,
+        labels={numeric_cols[1]: 'EGV (mS/cm)'},
+        category_orders={"maand": ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]})
+    plot2.write_html(teams_path+"plots/" + locatie +
+                     '/' + locatie + "_violin.html")
+    plot2.write_image(teams_path +
+                      "plots/" + locatie + '/' + locatie + "_violin.png")
+
+
+def plot_TS_quantiles(locatie, egv_db, numeric_cols):
+    my_dpi, teams_path = initialize_params(locatie)
+    category_orders = {"maand":
+                       ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]}
+    df1 = egv_db[['maand', numeric_cols[1]]]
+    df2 = df1.groupby('maand').quantile(
+        [0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90])
+    df3 = df2[df2.columns[0]].unstack().reindex(category_orders['maand'])
+    df3[0.5].plot(
+        color='black', linewidth=2, figsize=(1920/my_dpi, 1080/my_dpi),
+        title='Percentielen EGV (mS/cm) per maand', xlabel='maand',
+        ylabel='EGV (mS/cm)', label='50%')
+    for i, col in enumerate(df3.columns):
+        if i < len(df3.columns)-1:
+            alpha = col+0.1
+            matplotlib.pyplot.fill_between(
+                category_orders['maand'],
+                df3[df3.columns[i]], df3[df3.columns[i+1]],
+                alpha=alpha, color='blue', linewidth=0,
+                label=f'Percentiel {df3.columns[i]*100:g}% - {df3.columns[i+1]*100:g}%')  # noqa
+    matplotlib.pyplot.legend()
+    matplotlib.pyplot.savefig(
+        teams_path+"plots/" + locatie + '/' + locatie + "_percentielen.png")
 
 
 if __name__ == '__main__':
