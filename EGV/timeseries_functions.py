@@ -1,15 +1,20 @@
 import pandas as pd
 import telecontrol_parser as tp
 import numpy as np
+import os
 
 
 def main():
-    tsdf = tp.egv_standard_run(locatie='parkhaven', threshold=24)
+    locatie = 'parkhaven'
+    tsdf = tp.egv_standard_run(locatie=locatie, threshold=24)
     tsdf = tsdf_interpolate_small_gaps(tsdf, 12)
     print(tsdf_report_gaps(tsdf, 1))
     subset_datasets_dates = tsdf_subset_datasets_dates(tsdf)
     print(subset_datasets_dates)
-    print(tsdf_get_datasets(tsdf, subset_datasets_dates))
+    datasets = tsdf_get_datasets(tsdf, subset_datasets_dates)
+    print(datasets)
+    tsdf_save_subsets(datasets)
+    print(tsdf_read_subsets(1))
 
 
 def tsdf_get_timesteps(tsdf):
@@ -95,6 +100,25 @@ def tsdf_standard_run(locatie='parkhaven', threshold=0, interpolate=12):
     print(subset_datasets_dates)
     datasets = tsdf_get_datasets(tsdf, subset_datasets_dates)
     return datasets
+
+
+def tsdf_save_subsets(datasets):
+    for i in datasets:
+        subdata = datasets[i]
+        start = str(subdata.index[0])[:10]
+        end = str(subdata.index[-1])[:10]
+        size = len(subdata)
+        subdata.to_csv(path_or_buf = f'{start}_{end}_{size}.csv',index = False)
+
+
+def tsdf_read_subsets(index):
+    files = []
+    for file in os.listdir():
+        if file.endswith('.csv'):
+            files.append(file)
+    dataset = pd.read_csv(files[index])
+    dataset = dataset.set_index('datetime', drop=False)
+    return dataset
 
 
 if __name__ == '__main__':

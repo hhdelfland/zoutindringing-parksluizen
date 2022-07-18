@@ -1,14 +1,19 @@
 import pandas as pd
 import telecontrol_parser as tp
 import timeseries_functions as tf
-
+from tsfresh import extract_features
 
 def main():
-    datasets = tf.tsdf_standard_run(
-        locatie='parkhaven',
-        threshold=24,
-        interpolate=12
-    )
+    dataset = tf.tsdf_read_subsets(3)
+    numeric_cols = tp.egv_get_numeric_cols(dataset)
+    y = dataset[numeric_cols[1]].to_frame()
+    y = y.reset_index(drop = True)
+    y['index'] = y.index
+    print(y)
+    print(extract_features(y,column_id= numeric_cols[1]))
+
+
+
 
 
 if __name__ == '__main__':
