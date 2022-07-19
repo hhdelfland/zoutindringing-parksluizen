@@ -10,7 +10,7 @@ def main():
     y = y.reset_index(drop = True)
     y['index'] = y.index
     print(y)
-    print(extract_features(y,column_id= numeric_cols[1]))
+    print(extract_features(y,column_id= 'index'))
 
 
 
