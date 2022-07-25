@@ -13,7 +13,7 @@ import numpy as np
 # data select attached series function
 
 def main():
-    egv_db = egv_standard_run('parkhaven')
+    egv_db = egv_standard_run(locatie='parkhaven', threshold=24)
     egv_inspect_ends(egv_db, 4)
 
 

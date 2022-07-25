@@ -108,7 +108,7 @@ def tsdf_save_subsets(datasets):
         start = str(subdata.index[0])[:10]
         end = str(subdata.index[-1])[:10]
         size = len(subdata)
-        subdata.to_csv(path_or_buf = f'{start}_{end}_{size}.csv',index = False)
+        subdata.to_csv(path_or_buf=f'{start}_{end}_{size}.csv', index=False)
 
 
 def tsdf_read_subsets(index):
