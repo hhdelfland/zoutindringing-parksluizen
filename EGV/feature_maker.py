@@ -9,6 +9,52 @@ from tsfresh.feature_extraction import MinimalFCParameters
 from itertools import repeat
 
 
+def fm_standard_run(subset, save=False, TIMESTEP_IN_HOUR=6, future_steps = 6):
+    TSData = TimeseriesDataset(tf.tsdf_read_subsets(subset))
+    rolling_funcs = ('mean', 'min', 'max', 'median', 'std', 'sum')
+    rolling_args = (TIMESTEP_IN_HOUR, TIMESTEP_IN_HOUR*2,
+                    TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR*24)
+
+    rolling_args1 = rolling_args*len(rolling_funcs)
+    rolling_funcs1 = [x for item in rolling_funcs for x in repeat(
+        item, len(rolling_args))]
+
+    TSData.fm_exec_func(TSData.fm_time)
+
+    TSData.rename_ycol('EGV_OPP')
+
+    TSData.fm_create_future_steps(future_steps)
+
+    TSData.fm_exec_func(
+        TSData.fm_diff,
+        arg_dict={'lag': (1, 2),
+                  'stepsize': (1, 1)})
+    TSData.fm_exec_func(
+        TSData.fm_lag,
+        arg_dict={'lag': (TIMESTEP_IN_HOUR * 24,)})
+    TSData.fm_exec_func(
+        TSData.fm_rolling,
+        arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})
+
+    TSData.ycol = TSData.get_numeric_cols()[0]
+    TSData.rename_ycol('TEMP_OPP')
+
+    TSData.fm_exec_func(
+        TSData.fm_diff,
+        arg_dict={'lag': (1, 2),
+                  'stepsize': (1, 1)})
+    TSData.fm_exec_func(
+        TSData.fm_lag,
+        arg_dict={'lag': (TIMESTEP_IN_HOUR * 24,)})
+    TSData.fm_exec_func(
+        TSData.fm_rolling,
+        arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})
+
+    if save:
+        TSData.fm_save(format='csv')
+        #TSData.fm_create_tsfresh()
+
+
 class TimeseriesDataset:
 
     def __init__(self, dataset):
@@ -33,8 +79,11 @@ class TimeseriesDataset:
         feat_data['index'] = feat_data.index
         feat_data = feat_data.rename(columns={ycol: 'Y'})
         feats = extract_features(feat_data, column_value='Y', column_id='date')
+        start = str(dataset.index[0])[:10]
+        end = str(dataset.index[-1])[:10]
+        size = len(dataset)
         print('Saving TSfresh features...')
-        feats.to_excel('data_sets/TSfeats.xlsx')
+        feats.to_excel(f'data_sets/TSfeats_{size}.xlsx')
 
     def fm_lag(self, lag, start=1):
         dataset = self.dataset
@@ -129,64 +178,29 @@ class TimeseriesDataset:
 
     def fm_save(self, format='csv'):
         dataset = self.dataset
+        start = str(dataset.index[0])[:10]
+        end = str(dataset.index[-1])[:10]
+        size = len(dataset)
         if format == 'csv':
             print('Saving to csv')
-            dataset.to_csv('data_sets/feats.csv')
+            dataset.to_csv(f'data_sets/feats_{size}.csv')
         elif format == 'xlsx':
             print('Saving to xlsx')
-            dataset.to_excel('data_sets/feats.xlsx')
+            dataset.to_excel(f'data_sets/feats_{size}.xlsx')
         else:
             raise ValueError(
                 "Format not supported. Should be either 'csv' or 'xlsx'.")
 
 
+
+
 def main():
-    save = False
+    save = True
     TIMESTEP_IN_HOUR = int(60/10)  # How many measurements in 1 hour
-    TSData = TimeseriesDataset(tf.tsdf_read_subsets(3))
-    rolling_funcs = ('mean', 'min', 'max', 'median', 'std', 'sum')
-    rolling_args = (TIMESTEP_IN_HOUR, TIMESTEP_IN_HOUR*2,
-                    TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR*24)
-
-    rolling_args1 = rolling_args*len(rolling_funcs)
-    rolling_funcs1 = [x for item in rolling_funcs for x in repeat(
-        item, len(rolling_args))]
-
-    TSData.fm_exec_func(TSData.fm_time)
-
-    TSData.rename_ycol('EGV_OPP')
-
-    TSData.fm_create_future_steps(6)
-
-    TSData.fm_exec_func(
-        TSData.fm_diff,
-        arg_dict={'lag': (1, 2),
-                  'stepsize': (1, 1)})
-    TSData.fm_exec_func(
-        TSData.fm_lag,
-        arg_dict={'lag': (TIMESTEP_IN_HOUR * 24,)})
-    TSData.fm_exec_func(
-        TSData.fm_rolling,
-        arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})
-
-    TSData.ycol = TSData.get_numeric_cols()[0]
-    TSData.rename_ycol('TEMP_OPP')
-
-    TSData.fm_exec_func(
-        TSData.fm_diff,
-        arg_dict={'lag': (1, 2),
-                  'stepsize': (1, 1)})
-    TSData.fm_exec_func(
-        TSData.fm_lag,
-        arg_dict={'lag': (TIMESTEP_IN_HOUR * 24,)})
-    TSData.fm_exec_func(
-        TSData.fm_rolling,
-        arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})
-
-    if save:
-        TSData.fm_save(format='xlsx')
-        TSData.fm_create_tsfresh()
-
+    fm_standard_run(subset = 0, save = save, future_steps = 36)
+    fm_standard_run(subset = 1, save = save, future_steps = 36)
+    fm_standard_run(subset = 2, save = save, future_steps = 36)
+    fm_standard_run(subset = 3, save = save, future_steps = 36)
 
 if __name__ == '__main__':
     main()
