@@ -8,6 +8,7 @@ from tsfresh import extract_features
 from tsfresh.feature_extraction import MinimalFCParameters
 from itertools import repeat
 
+
 class TimeseriesDataset:
 
     def __init__(self, dataset):
@@ -15,67 +16,76 @@ class TimeseriesDataset:
         self.dataset = dataset
         self.ycol = tp.egv_get_numeric_cols(dataset)[1]
 
+    def get_numeric_cols(self):
+        return tp.egv_get_numeric_cols(self.dataset)
+
+    def rename_ycol(self, newname):
+        self.dataset = self.dataset.rename(columns={self.ycol: newname})
+        self.ycol = newname
+
     def fm_create_tsfresh(self):
         dataset = self.dataset
-        numeric_cols = tp.egv_get_numeric_cols(dataset)
-        feat_data = dataset[numeric_cols[1]].to_frame()
+        ycol = self.ycol
+        feat_data = dataset[ycol].to_frame()
         feat_data['date'] = [dataset.index[i].date()
                              for i in range(len(dataset))]
         feat_data = feat_data.reset_index(drop=True)
         feat_data['index'] = feat_data.index
-        feat_data = feat_data.rename(columns={numeric_cols[1]: 'Y'})
+        feat_data = feat_data.rename(columns={ycol: 'Y'})
         feats = extract_features(feat_data, column_value='Y', column_id='date')
         print('Saving TSfresh features...')
         feats.to_excel('data_sets/TSfeats.xlsx')
 
     def fm_lag(self, lag, start=1):
         dataset = self.dataset
-        numeric_cols = tp.egv_get_numeric_cols(dataset)
+        ycol = self.ycol
         for i in range(start, lag + 1):
-            dataset['lag_' + str(i)] = dataset[numeric_cols[1]].shift(i)
+            dataset[ycol + '_lag_' + str(i)] = dataset[ycol].shift(i)
         return self.dataset
 
     def fm_diff(self, lag, stepsize=1, start=1):
         dataset = self.dataset
-        numeric_cols = tp.egv_get_numeric_cols(dataset)
+        ycol = self.ycol
         for i in range(start, lag + 1):
             if stepsize > 1:
-                col_val = dataset[numeric_cols[1]].diff(i)
+                col_val = dataset[ycol].diff(i)
                 for step in range(1, stepsize):
                     col_val = np.diff(col_val.values, prepend=np.nan)
-                dataset['diff_' + str(stepsize) + '_' + str(i)] = col_val
+                dataset[ycol + '_diff_' +
+                        str(stepsize) + '_' + str(i)] = col_val
             else:
-                dataset['diff_' + str(stepsize) + '_' + str(i)
-                        ] = dataset[numeric_cols[1]].diff(i)
+                dataset[ycol + '_diff_' + str(stepsize) + '_' + str(i)
+                        ] = dataset[ycol].diff(i)
         return self.dataset
 
     def fm_rolling(self, window_size, func='mean'):
         dataset = self.dataset
-        numeric_cols = tp.egv_get_numeric_cols(dataset)
-        col_roll = dataset[numeric_cols[1]].rolling(window_size)
+        ycol = self.ycol
+        col_roll = dataset[ycol].rolling(window_size)
         if func == 'mean':
             col_val = col_roll.mean()
-            col_val.name = 'mean_' + str(window_size)
+            col_val.name = ycol + '_mean_' + str(window_size)
         if func == 'min':
             col_val = col_roll.min()
-            col_val.name = 'min_' + str(window_size)
+            col_val.name = ycol + '_min_' + str(window_size)
         if func == 'max':
             col_val = col_roll.max()
-            col_val.name = 'max_' + str(window_size)
+            col_val.name = ycol + '_max_' + str(window_size)
         if func == 'sum':
             col_val = col_roll.sum()
-            col_val.name = 'sum_' + str(window_size)
+            col_val.name = ycol + '_sum_' + str(window_size)
         if func == 'std':
             col_val = col_roll.std()
-            col_val.name = 'std_' + str(window_size)
+            col_val.name = ycol + '_std_' + str(window_size)
         if func == 'median':
             col_val = col_roll.quantile(0.5)
-            col_val.name = 'median_' + str(window_size)
+            col_val.name = ycol + '_median_' + str(window_size)
         dataset = pd.concat([dataset, col_val], axis=1)
         return self.dataset
 
     def fm_time(self):
         dataset = self.dataset
+        ycol = self.ycol
         dataset['hour'] = [dataset.index[i].hour for i in range(len(dataset))]
         dataset['hour_sin'] = np.sin(dataset['hour']*(2.*np.pi/23))
         dataset['hour_cos'] = np.cos(dataset['hour']*(2.*np.pi/23))
@@ -112,36 +122,70 @@ class TimeseriesDataset:
             print('Executing: ' + func_name.__name__)
             func_name()
 
+    def fm_create_future_steps(self, steps):
+        for i in range(1, steps+1):
+            self.dataset[self.ycol + '_(t+' + str(i)+')'] = \
+                self.dataset[self.ycol].shift(-i)
+
     def fm_save(self, format='csv'):
         dataset = self.dataset
         if format == 'csv':
             print('Saving to csv')
             dataset.to_csv('data_sets/feats.csv')
-        if format == 'xlsx':
+        elif format == 'xlsx':
             print('Saving to xlsx')
             dataset.to_excel('data_sets/feats.xlsx')
+        else:
+            raise ValueError(
+                "Format not supported. Should be either 'csv' or 'xlsx'.")
 
 
 def main():
+    save = False
     TIMESTEP_IN_HOUR = int(60/10)  # How many measurements in 1 hour
     TSData = TimeseriesDataset(tf.tsdf_read_subsets(3))
+    rolling_funcs = ('mean', 'min', 'max', 'median', 'std', 'sum')
+    rolling_args = (TIMESTEP_IN_HOUR, TIMESTEP_IN_HOUR*2,
+                    TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR*24)
+
+    rolling_args1 = rolling_args*len(rolling_funcs)
+    rolling_funcs1 = [x for item in rolling_funcs for x in repeat(
+        item, len(rolling_args))]
 
     TSData.fm_exec_func(TSData.fm_time)
-    TSData.fm_exec_func(TSData.fm_diff,
-                        arg_dict={'lag': (1, 2),
-                                  'stepsize': (1, 1)})
-    TSData.fm_exec_func(TSData.fm_lag,
-                        arg_dict={'lag': (TIMESTEP_IN_HOUR * 24,)})
 
-    rolling_funcs = ('mean', 'min', 'max', 'median','std')
-    rolling_funcs = [x for item in rolling_funcs for x in repeat(item, 4)]
-    rolling_args = (TIMESTEP_IN_HOUR, TIMESTEP_IN_HOUR*2,TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR*24)*5
+    TSData.rename_ycol('EGV_OPP')
+
+    TSData.fm_create_future_steps(6)
+
+    TSData.fm_exec_func(
+        TSData.fm_diff,
+        arg_dict={'lag': (1, 2),
+                  'stepsize': (1, 1)})
+    TSData.fm_exec_func(
+        TSData.fm_lag,
+        arg_dict={'lag': (TIMESTEP_IN_HOUR * 24,)})
     TSData.fm_exec_func(
         TSData.fm_rolling,
-        arg_dict={'func': rolling_funcs, 'window_size': rolling_args})
+        arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})
 
-    TSData.fm_save(format='xlsx')
-    TSData.fm_create_tsfresh()
+    TSData.ycol = TSData.get_numeric_cols()[0]
+    TSData.rename_ycol('TEMP_OPP')
+
+    TSData.fm_exec_func(
+        TSData.fm_diff,
+        arg_dict={'lag': (1, 2),
+                  'stepsize': (1, 1)})
+    TSData.fm_exec_func(
+        TSData.fm_lag,
+        arg_dict={'lag': (TIMESTEP_IN_HOUR * 24,)})
+    TSData.fm_exec_func(
+        TSData.fm_rolling,
+        arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})
+
+    if save:
+        TSData.fm_save(format='xlsx')
+        TSData.fm_create_tsfresh()
 
 
 if __name__ == '__main__':
