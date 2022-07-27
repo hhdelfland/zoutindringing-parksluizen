@@ -51,7 +51,7 @@ def fm_standard_run(subset, save=False, TIMESTEP_IN_HOUR=6, future_steps = 6):
         arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})
 
     if save:
-        TSData.fm_save(format='csv')
+        TSData.fm_save(format='parquet')
         #TSData.fm_create_tsfresh()
 
 
@@ -181,15 +181,20 @@ class TimeseriesDataset:
         start = str(dataset.index[0])[:10]
         end = str(dataset.index[-1])[:10]
         size = len(dataset)
+        fname = f'data_sets/feats/feats_{start}_{end}_{size}'
         if format == 'csv':
             print('Saving to csv')
-            dataset.to_csv(f'data_sets/feats_{size}.csv')
+            dataset.to_csv(fname + '.csv')
         elif format == 'xlsx':
             print('Saving to xlsx')
-            dataset.to_excel(f'data_sets/feats_{size}.xlsx')
+            dataset.to_excel(fname + '.xlsx')
+        elif format == 'parquet':
+            print('Saving to parquet')
+            dataset.to_parquet(fname + '.parquet')
         else:
             raise ValueError(
-                "Format not supported. Should be either 'csv' or 'xlsx'.")
+                "Format not supported. Should be \
+                either 'csv','xlsx' or 'parque'.")
 
 
 
