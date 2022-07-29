@@ -4,14 +4,14 @@ import sklearn
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error as mse
 
-def mdl_get_feats(index):
-    files = []
-    for file in os.listdir('data_sets/feats'):
-        if file.startswith('feats_') and file.endswith('.parquet'):
-            files.append(file)
-    dataset = pd.read_parquet('data_sets/feats/'+files[index])
-    dataset = dataset.set_index('datetime', drop=True)
-    return dataset
+# def mdl_get_feats(index):
+#     files = []
+#     for file in os.listdir('data_sets/feats'):
+#         if file.startswith('feats_') and file.endswith('.parquet'):
+#             files.append(file)
+#     dataset = pd.read_parquet('data_sets/feats/'+files[index])
+#     dataset = dataset.set_index('datetime', drop=True)
+#     return dataset
 
 
 class MLdata:
@@ -85,10 +85,10 @@ class MLdata:
         # FIX HARDCODED Y!
             # ZOEK SHIFTS UIT VOOR NAIVE MODEL!!
 
-        x = self.x_dataset
-        y = self.y_dataset.copy()
-        for index,col in enumerate(y.columns):
-            y[col] = x['EGV_OPP'].shift(-index)
+        x = self.test_x
+        y = self.test_y.copy()
+        for col in y.columns:
+            y[col] = x['EGV_OPP']
         return y
 
 def main():
@@ -103,8 +103,8 @@ def main():
     MLdb.drop_na()
     MLdb.create_train_test_split(0.8)
     MLdb.linear_regression()
+    print(MLdb.test_y)
     print(MLdb.naive_predictive())
-    print(MLdb.y_dataset)
     # ZOEK SHIFTS UIT VOOR NAIVE MODEL!!
 
 if __name__ == '__main__':
