@@ -53,6 +53,9 @@ def fm_standard_run(subset, save=False, TIMESTEP_IN_HOUR=6, future_steps = 6):
     if save:
         TSData.fm_save(format='parquet')
         #TSData.fm_create_tsfresh()
+    else:
+        pd.set_option('display.max_columns', None)
+        print(list(TSData.dataset.columns))
 
 
 class TimeseriesDataset:
@@ -90,7 +93,8 @@ class TimeseriesDataset:
         ycol = self.ycol
         for i in range(start, lag + 1):
             dataset[ycol + '_lag_' + str(i)] = dataset[ycol].shift(i)
-        return self.dataset
+        self.dataset = dataset
+        return self
 
     def fm_diff(self, lag, stepsize=1, start=1):
         dataset = self.dataset
@@ -105,7 +109,8 @@ class TimeseriesDataset:
             else:
                 dataset[ycol + '_diff_' + str(stepsize) + '_' + str(i)
                         ] = dataset[ycol].diff(i)
-        return self.dataset
+        self.dataset = dataset
+        return self
 
     def fm_rolling(self, window_size, func='mean'):
         dataset = self.dataset
@@ -130,7 +135,8 @@ class TimeseriesDataset:
             col_val = col_roll.quantile(0.5)
             col_val.name = ycol + '_median_' + str(window_size)
         dataset = pd.concat([dataset, col_val], axis=1)
-        return self.dataset
+        self.dataset = dataset
+        return self
 
     def fm_time(self):
         dataset = self.dataset
@@ -153,7 +159,8 @@ class TimeseriesDataset:
             dataset.index[i].month for i in range(len(dataset))]
         dataset['month_sin'] = np.sin(dataset['month']*(2.*np.pi/12))
         dataset['month_cos'] = np.cos(dataset['month']*(2.*np.pi/12))
-        return self.dataset
+        dataset.self = dataset
+        return self
 
     def fm_exec_func(self, func_name, arg_dict=None):
         if not(isinstance(arg_dict, type(None))):
@@ -194,7 +201,7 @@ class TimeseriesDataset:
         else:
             raise ValueError(
                 "Format not supported. Should be \
-                either 'csv','xlsx' or 'parque'.")
+                either 'csv','xlsx' or 'parquet'.")
 
 
 
@@ -202,10 +209,10 @@ class TimeseriesDataset:
 def main():
     save = True
     TIMESTEP_IN_HOUR = int(60/10)  # How many measurements in 1 hour
-    fm_standard_run(subset = 0, save = save, future_steps = 36)
-    fm_standard_run(subset = 1, save = save, future_steps = 36)
-    fm_standard_run(subset = 2, save = save, future_steps = 36)
-    fm_standard_run(subset = 3, save = save, future_steps = 36)
+    fm_standard_run(subset = 0, save = save, future_steps = 6*36)
+    fm_standard_run(subset = 1, save = save, future_steps = 6*36)
+    fm_standard_run(subset = 2, save = save, future_steps = 6*36)
+    fm_standard_run(subset = 3, save = save, future_steps = 6*36)
 
 if __name__ == '__main__':
     main()
