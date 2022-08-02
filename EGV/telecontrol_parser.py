@@ -229,9 +229,10 @@ def egv_remove_repeated_sensor_data(egv_db, numeric_cols, threshold):
             egv_db[numeric_cols[1]].diff(1) != 0.0, np.nan)
         return egv_db
     else:
-        roller = egv_db[numeric_cols[1]].rolling(threshold+1).std().round(6)
-        replacement = egv_db[numeric_cols[1]].where(roller != 0, np.nan)
-        egv_db[numeric_cols[1]] = replacement
+        roller = egv_db[numeric_cols[1]].rolling(threshold+1).std().round(5)
+        # replacement = egv_db[numeric_cols[1]].where(roller != 0, np.nan)
+        # egv_db[numeric_cols[1]] = replacement
+        egv_db.loc[roller == 0, numeric_cols[1]] = np.nan
         return egv_db
 
 

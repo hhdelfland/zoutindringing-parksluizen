@@ -4,15 +4,13 @@ import plotly
 import tkinter
 import os
 import numpy as np
-import seaborn
 import plotly.express
-import kaleido
 import nbformat
 import telecontrol_parser as tp
-
+import kaleido
 
 def main():
-    save_TS_plots = False
+    save_TS_plots = True
     save_violin_plots = False
     save_quantile_plots = False
     locatie = 'parkhaven'
@@ -26,13 +24,13 @@ def main():
                ['2021-01-01', '2021-12-31'], ['2022-01-01', '2022-12-31'],
                ['2015-01-01', '2022-12-31']
                )
-    # plot_TS(locatie, egv_db, numeric_cols, subsets)
+    plot_TS(locatie, egv_db, numeric_cols, subsets)
     # plot_TS_violin(locatie, egv_db, numeric_cols)
     plot_TS_quantiles(locatie, egv_db, numeric_cols)
 
 
 def initialize_params(locatie):
-    with open('zoutindringing-parksluizen-1/teams_path') as f:
+    with open('teams_path') as f:
         lines = f.readlines()
     teams_path = lines[0] + '/'
     isExist = os.path.exists(teams_path+'plots/' + locatie)

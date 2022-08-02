@@ -2,7 +2,11 @@ import os
 import pandas as pd
 import sklearn
 from sklearn.linear_model import LinearRegression
+# from sklearn.linear_model import MultiTaskLassoCV
+# from sklearn.linear_model import MultiTaskElasticNetCV
+from sklearn.linear_model import *
 from sklearn.metrics import mean_squared_error as mse
+from sklearn.multioutput import MultiOutputRegressor
 
 # def mdl_get_feats(index):
 #     files = []
@@ -81,6 +85,37 @@ class MLdata:
         self.model = sk_model
         return self
 
+    def multi_lassoCV(self,**kwargs):
+        x = self.train_x
+        y = self.train_y
+        sk_model = MultiTaskLassoCV(**kwargs).fit(x,y)
+        y_pred = sk_model.predict(self.test_x)
+        print(mse(self.test_y,y_pred)**(1/2))
+        self.model = sk_model
+        return self
+
+    def multi_elastic_net(self,**kwargs):
+        x = self.train_x
+        y = self.train_y
+        sk_model = MultiTaskElasticNetCV(**kwargs).fit(x,y)
+        y_pred = sk_model.predict(self.test_x)
+        print(mse(self.test_y,y_pred)**(1/2))
+        self.model = sk_model
+        return self
+    
+    def use_model(self,modelfunc,**kwargs):
+        x = self.train_x
+        y = self.train_y
+        modeltype = modelfunc()
+        if modeltype._get_tags()['multioutput']:
+            sk_model = modelfunc(**kwargs).fit(x,y)
+        else:
+            sk_model = MultiOutputRegressor(modelfunc(**kwargs),n_jobs=-1).fit(x,y)
+        y_pred = sk_model.predict(self.test_x)
+        print(mse(self.test_y,y_pred)**(1/2))
+        self.model = sk_model
+        return self
+
     def naive_predictive(self):
         # FIX HARDCODED Y!
             # ZOEK SHIFTS UIT VOOR NAIVE MODEL!!
@@ -103,8 +138,6 @@ def main():
     MLdb.drop_na()
     MLdb.create_train_test_split(0.8)
     MLdb.linear_regression()
-    print(MLdb.test_y)
-    print(MLdb.naive_predictive())
     # ZOEK SHIFTS UIT VOOR NAIVE MODEL!!
 
 if __name__ == '__main__':

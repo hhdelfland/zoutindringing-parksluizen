@@ -7,6 +7,7 @@ import os
 def main():
     locatie = 'parkhaven'
     tsdf = tp.egv_standard_run(locatie=locatie, threshold=24)
+    print(tsdf_report_gaps(tsdf, 1))
     tsdf = tsdf_interpolate_small_gaps(tsdf, 12)
     print(tsdf_report_gaps(tsdf, 1))
     subset_datasets_dates = tsdf_subset_datasets_dates(tsdf)
