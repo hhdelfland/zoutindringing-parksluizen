@@ -27,8 +27,11 @@ def featurize_lobith(lobith_db):
     tsd = fm.TimeseriesDataset(lobith_db,ycol ='lobith_debiet')
     TIMESTEP_IN_HOUR = 6
     rolling_funcs = ('mean', 'min', 'max', 'median', 'std', 'sum')
-    rolling_args = (TIMESTEP_IN_HOUR, TIMESTEP_IN_HOUR*2,
-                    TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR*24)
+    rolling_args = (TIMESTEP_IN_HOUR * 24 ,  TIMESTEP_IN_HOUR * 24 * 2,TIMESTEP_IN_HOUR * 24 * 3,TIMESTEP_IN_HOUR * 24 * 4,TIMESTEP_IN_HOUR * 24 * 5,
+                    TIMESTEP_IN_HOUR * 24 * 6,TIMESTEP_IN_HOUR * 24 * 7,TIMESTEP_IN_HOUR * 24 * 8,TIMESTEP_IN_HOUR * 24 * 9,TIMESTEP_IN_HOUR * 24 * 10,
+                    TIMESTEP_IN_HOUR * 24 * 11,TIMESTEP_IN_HOUR * 24 * 12,TIMESTEP_IN_HOUR * 24 * 13,TIMESTEP_IN_HOUR * 24 * 14,TIMESTEP_IN_HOUR * 24 * 15,
+                    TIMESTEP_IN_HOUR * 24 * 16,TIMESTEP_IN_HOUR * 24 * 17,TIMESTEP_IN_HOUR * 24 * 18,TIMESTEP_IN_HOUR * 24 * 19,TIMESTEP_IN_HOUR * 24 * 20,
+                    TIMESTEP_IN_HOUR * 24 * 21)
 
     rolling_args1 = rolling_args*len(rolling_funcs)
     rolling_funcs1 = [x for item in rolling_funcs for x in repeat(
@@ -40,9 +43,9 @@ def featurize_lobith(lobith_db):
         tsd.fm_diff,
         arg_dict={'lag': (1, 2),
                 'stepsize': (1, 1)})
-    tsd.fm_exec_func(
-        tsd.fm_lag,
-        arg_dict={'lag': (TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24),'start' : (144*3,144*4,144*5,144*6,144*7)})
+    # tsd.fm_exec_func(
+    #     tsd.fm_lag,
+    #     arg_dict={'lag': (TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24),'start' : (144*3,144*4,144*5,144*6,144*7)})
     tsd.fm_exec_func(
         tsd.fm_rolling,
         arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})

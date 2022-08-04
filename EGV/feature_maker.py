@@ -12,8 +12,11 @@ from itertools import repeat
 def fm_standard_run(subset, save=False, ycol = None, TIMESTEP_IN_HOUR=6, future_steps = 6):
     TSData = TimeseriesDataset(tf.tsdf_read_subsets(subset,path='E:/Rprojects/zoutindringing-parksluizen/'),ycol)
     rolling_funcs = ('mean', 'min', 'max', 'median', 'std', 'sum')
-    rolling_args = (TIMESTEP_IN_HOUR, TIMESTEP_IN_HOUR*2,
-                    TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR*24)
+    rolling_args = (TIMESTEP_IN_HOUR, TIMESTEP_IN_HOUR*2,TIMESTEP_IN_HOUR*3,TIMESTEP_IN_HOUR*4,TIMESTEP_IN_HOUR*5,
+                    TIMESTEP_IN_HOUR*6,TIMESTEP_IN_HOUR*7,TIMESTEP_IN_HOUR*8,TIMESTEP_IN_HOUR*9,TIMESTEP_IN_HOUR*10,
+                    TIMESTEP_IN_HOUR*11,TIMESTEP_IN_HOUR*12,TIMESTEP_IN_HOUR*13,TIMESTEP_IN_HOUR*14,TIMESTEP_IN_HOUR*15,
+                    TIMESTEP_IN_HOUR*16,TIMESTEP_IN_HOUR*17,TIMESTEP_IN_HOUR*18,TIMESTEP_IN_HOUR*19,TIMESTEP_IN_HOUR*20,
+                    TIMESTEP_IN_HOUR*21,TIMESTEP_IN_HOUR*22,TIMESTEP_IN_HOUR*23,TIMESTEP_IN_HOUR*24)
 
     rolling_args1 = rolling_args*len(rolling_funcs)
     rolling_funcs1 = [x for item in rolling_funcs for x in repeat(
@@ -31,7 +34,7 @@ def fm_standard_run(subset, save=False, ycol = None, TIMESTEP_IN_HOUR=6, future_
                   'stepsize': (1, 1)})
     TSData.fm_exec_func(
         TSData.fm_lag,
-        arg_dict={'lag': (TIMESTEP_IN_HOUR * 2,)})
+        arg_dict={'lag': (TIMESTEP_IN_HOUR * 144,)})
     TSData.fm_exec_func(
         TSData.fm_rolling,
         arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})
