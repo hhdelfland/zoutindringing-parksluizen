@@ -34,6 +34,10 @@ class MLdata:
         self.datadict = datadict
         return self
 
+    def load_lobith_feats(self):
+        self.lobith_feats = pd.read_parquet('E:\Rprojects\zoutindringing-parksluizen\data_sets\lobith_feats\lobith_feats.parquet')
+        return self
+
     def combine_datasets(self):
         self.datadict['ALL'] = pd.concat(self.datadict.values()) 
         return self
@@ -42,10 +46,18 @@ class MLdata:
         keys = list(self.datadict.keys())
         return keys
 
-    def set_dataset(self,key):
+    def set_dataset(self,key,features = ('lobith_feats',)):
         if isinstance(key,int):
             key = self.get_datasets()[key]
-        self.dataset = self.datadict[key]
+        dataset = self.datadict[key]
+        if 'lobith_feats' in features:
+            start_idx = dataset.index[0]
+            end_idx = dataset.index[-1]
+            self.load_lobith_feats()
+            lobith_feats = self.lobith_feats[start_idx:end_idx]
+            # dataset = pd.concat([dataset,lobith_feats],axis=1)
+            dataset[lobith_feats.columns] = lobith_feats
+        self.dataset = dataset
         return self
 
     def drop_na(self):
@@ -137,12 +149,15 @@ def main():
     # print(MLdb.datadict[list(MLdb.datadict.keys())[2]])
     # print(MLdb.datadict['ALL'])
     # print(MLdb.get_datasets())
-    MLdb.set_dataset(1)
+    MLdb.set_dataset(0,features = ('lobith_feats',))
     MLdb.clean_columns()
     MLdb.drop_na()
     MLdb.create_train_test_split(0.8)
-    MLdb.linear_regression()
-    # ZOEK SHIFTS UIT VOOR NAIVE MODEL!!
+    # MLdb.linear_regression()
+    # print(MLdb.dataset.shape)
+    # start_idx = MLdb.dataset.index[0]
+    # end_idx = MLdb.dataset.index[-1]
+    # print(MLdb.lobith_feats[start_idx:end_idx].shape)
 
 if __name__ == '__main__':
     main()
