@@ -9,8 +9,8 @@ from tsfresh.feature_extraction import MinimalFCParameters
 from itertools import repeat
 
 
-def fm_standard_run(subset, save=False, TIMESTEP_IN_HOUR=6, future_steps = 6):
-    TSData = TimeseriesDataset(tf.tsdf_read_subsets(subset))
+def fm_standard_run(subset, save=False, ycol = None, TIMESTEP_IN_HOUR=6, future_steps = 6):
+    TSData = TimeseriesDataset(tf.tsdf_read_subsets(subset,path='E:/Rprojects/zoutindringing-parksluizen/'),ycol)
     rolling_funcs = ('mean', 'min', 'max', 'median', 'std', 'sum')
     rolling_args = (TIMESTEP_IN_HOUR, TIMESTEP_IN_HOUR*2,
                     TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR*24)
@@ -31,7 +31,7 @@ def fm_standard_run(subset, save=False, TIMESTEP_IN_HOUR=6, future_steps = 6):
                   'stepsize': (1, 1)})
     TSData.fm_exec_func(
         TSData.fm_lag,
-        arg_dict={'lag': (TIMESTEP_IN_HOUR * 24,)})
+        arg_dict={'lag': (TIMESTEP_IN_HOUR * 2,)})
     TSData.fm_exec_func(
         TSData.fm_rolling,
         arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})
@@ -45,7 +45,7 @@ def fm_standard_run(subset, save=False, TIMESTEP_IN_HOUR=6, future_steps = 6):
                   'stepsize': (1, 1)})
     TSData.fm_exec_func(
         TSData.fm_lag,
-        arg_dict={'lag': (TIMESTEP_IN_HOUR * 24,)})
+        arg_dict={'lag': (TIMESTEP_IN_HOUR * 2,)})
     TSData.fm_exec_func(
         TSData.fm_rolling,
         arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})
@@ -60,10 +60,12 @@ def fm_standard_run(subset, save=False, TIMESTEP_IN_HOUR=6, future_steps = 6):
 
 class TimeseriesDataset:
 
-    def __init__(self, dataset):
+    def __init__(self, dataset, ycol = None):
         dataset = dataset.set_index(pd.to_datetime(dataset['datetime']))
         self.dataset = dataset
-        self.ycol = tp.egv_get_numeric_cols(dataset)[1]
+        self.ycol = ycol
+        if isinstance(self.ycol,type(None)):
+            self.ycol = tp.egv_get_numeric_cols(dataset)[1]
 
     def get_numeric_cols(self):
         return tp.egv_get_numeric_cols(self.dataset)
@@ -92,7 +94,7 @@ class TimeseriesDataset:
         dataset = self.dataset
         ycol = self.ycol
         for i in range(start, lag + 1):
-            dataset[ycol + '_lag_' + str(i)] = dataset[ycol].shift(i)
+            dataset[ycol + '_lag_' + str(i)+'_start_'+str(start)] = dataset[ycol].shift(i)
         self.dataset = dataset
         return self
 
