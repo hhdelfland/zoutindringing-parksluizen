@@ -76,6 +76,10 @@ class MLdata:
         self.test_y = y.loc[train_date:]
         return self
 
+
+    def scale_data(self):
+        pass
+
     def linear_regression(self):
         x = self.train_x
         y = self.train_y

@@ -1,6 +1,7 @@
 import pandas as pd
 import os.path
 import numpy as np
+import datetime
 
 
 # TODO
@@ -13,8 +14,8 @@ import numpy as np
 # data select attached series function
 
 def main():
-    egv_db = egv_standard_run(locatie='parkhaven', threshold=24)
-    egv_inspect_ends(egv_db, 4)
+    egv_db = egv_standard_run(locatie='westland', threshold=24)
+    # egv_inspect_ends(egv_db, 4)
 
 
 def egv_reader(path, delimiter='\t'):
@@ -145,7 +146,7 @@ def egv_index_datetime(egv_db):
     return egv_db
 
 
-def egv_force_time_step(egv_db, step_size='10min'):
+def egv_force_time_step(egv_db, step_size=10):
     """Forces datframe to have a row every 10 minutes
     by filling with nan
 
@@ -153,20 +154,25 @@ def egv_force_time_step(egv_db, step_size='10min'):
     ----------
     egv_db : pandas dataframe
         dataframe with datetime index
-    step_size : str, optional
-        time fill, should be chosen based
-        on most prevalent timestep in data,
-        by default '10min'
+    step_size : int, optional
+        time fill in minutes, should be chosen based
+        on GCD timestep in data,
+        by default '10'
 
     Returns
     -------
     _type_
         _description_
     """
-    series_start = egv_db['datetime'][0]
-    series_end = egv_db['datetime'][-1]
-    datetime_range = pd.date_range(series_start, series_end, freq='10min')
-    egv_db = egv_db.reindex(datetime_range, fill_value=np.nan)
+    time_step = str(step_size) + 'min'
+    GCD = np.gcd.reduce(np.array(egv_get_timesteps(egv_db)))
+    if GCD == step_size:
+        series_start = egv_db['datetime'][0]
+        series_end = egv_db['datetime'][-1]
+        datetime_range = pd.date_range(series_start, series_end, freq=time_step)
+        egv_db = egv_db.reindex(datetime_range, fill_value=np.nan)
+    else:
+        pass
     return egv_db
 
 
@@ -253,6 +259,39 @@ def egv_inspect_ends(egv_db, size=1):
         print(egv_db.describe())
 
 
+def egv_get_timesteps(tsdf):
+    """Gets time steps or 'jumps in time' of a pandas
+    dataframe with a datetime index, after parsing should be 10 mins
+
+    Parameters
+    ----------
+    tsdf : pandas dataframe
+        pandas dataframe with a datetime index
+
+    Returns
+    -------
+    IntegerArray
+        list or array with time jumps found
+    """
+    minute_steps = tsdf['datetime'].diff(1).dt.seconds/60
+    present_step_sizes = minute_steps.astype(
+        'Int64', errors='ignore').unique()[1:]
+    return present_step_sizes
+
+
+def round_datetime(my_dt,res= 10,direction = 'nearest'):
+    rem = my_dt.minute % res
+    if res - rem < 5 and direction == 'nearest':
+        my_dt = my_dt + datetime.timedelta(minutes=res - rem)
+    elif direction == 'nearest':
+        my_dt = my_dt - datetime.timedelta(minutes=rem)
+    if direction == 'down':
+        my_dt = my_dt - datetime.timedelta(minutes=rem)
+    if direction == 'up':
+        my_dt = my_dt + datetime.timedelta(minutes=res - rem)
+    return my_dt
+
+
 def egv_standard_run(locatie='parkhaven', threshold=1):
     """wrapper function that runs a standard set
     of cuntions to load telecontrol data
@@ -279,6 +318,8 @@ def egv_standard_run(locatie='parkhaven', threshold=1):
         egv_db = egv_remove_repeated_sensor_data(
             egv_db, numeric_cols, threshold=threshold)
     egv_db = egv_index_datetime(egv_db)
+    # print(np.gcd.reduce(np.array(egv_get_timesteps(egv_db))))
+
     egv_db = egv_force_time_step(egv_db)
 
     return egv_db

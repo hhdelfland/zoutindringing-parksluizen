@@ -5,37 +5,29 @@ import os
 
 
 def main():
-    locatie = 'parkhaven'
-    tsdf = tp.egv_standard_run(locatie=locatie, threshold=24)
-    print(tsdf_report_gaps(tsdf, 1))
-    tsdf = tsdf_interpolate_small_gaps(tsdf, 12)
-    print(tsdf_report_gaps(tsdf, 1))
-    subset_datasets_dates = tsdf_subset_datasets_dates(tsdf)
-    print(subset_datasets_dates)
-    datasets = tsdf_get_datasets(tsdf, subset_datasets_dates)
-    print(datasets)
-    tsdf_save_subsets(datasets)
-    print(tsdf_read_subsets(1))
+    locatie = 'westland'
+    path = locatie + '_datasets/'
+    isExist = os.path.exists(path)
+    if not isExist:  
+        os.makedirs(path)
+
+    tsdf = tp.egv_standard_run(locatie=locatie, threshold=0)
+    print(tsdf)
 
 
-def tsdf_get_timesteps(tsdf):
-    """Gets time steps or 'jumps in time' of a pandas
-    dataframe with a datetime index, after parsing should be 10 mins
 
-    Parameters
-    ----------
-    tsdf : pandas dataframe
-        pandas dataframe with a datetime index
 
-    Returns
-    -------
-    IntegerArray
-        list or array with time jumps found
-    """
-    minute_steps = tsdf['datetime'].diff(1).dt.seconds/60
-    present_step_sizes = minute_steps.astype(
-        'Int64', errors='ignore').unique()[1:]
-    return present_step_sizes
+    # tsdf = tp.egv_standard_run(locatie=locatie, threshold=24)
+    # print(tsdf_report_gaps(tsdf, 1))
+    # tsdf = tsdf_interpolate_small_gaps(tsdf, 12)
+    # print(tsdf_report_gaps(tsdf, 1))
+    # subset_datasets_dates = tsdf_subset_datasets_dates(tsdf)
+    # print(subset_datasets_dates)
+    # datasets = tsdf_get_datasets(tsdf, subset_datasets_dates)
+    # print(datasets)
+    # tsdf_save_subsets(datasets,path)
+    # print(tsdf_read_subsets(1,path))
+
 
 
 def tsdf_report_gaps(tsdf, size=6):
@@ -103,21 +95,21 @@ def tsdf_standard_run(locatie='parkhaven', threshold=0, interpolate=12):
     return datasets
 
 
-def tsdf_save_subsets(datasets):
+def tsdf_save_subsets(datasets,path = ''):
     for i in datasets:
         subdata = datasets[i]
         start = str(subdata.index[0])[:10]
         end = str(subdata.index[-1])[:10]
         size = len(subdata)
-        subdata.to_csv(path_or_buf=f'{start}_{end}_{size}.csv', index=False)
+        subdata.to_csv(path_or_buf=path + f'{start}_{end}_{size}.csv', index=False)
 
 
-def tsdf_read_subsets(index):
+def tsdf_read_subsets(index, path = ''):
     files = []
-    for file in os.listdir():
+    for file in os.listdir(path):
         if file.endswith('.csv'):
             files.append(file)
-    dataset = pd.read_csv(files[index])
+    dataset = pd.read_csv(path + files[index])
     dataset = dataset.set_index('datetime', drop=False)
     return dataset
 
