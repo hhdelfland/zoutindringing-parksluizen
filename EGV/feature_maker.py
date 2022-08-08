@@ -10,6 +10,7 @@ from tsfresh.feature_extraction import MinimalFCParameters
 from itertools import repeat
 import itertools
 
+
 def fm_window_functions(col, ycol, window_size, func):
     if func == 'mean':
         col_val = col.mean()
@@ -31,30 +32,31 @@ def fm_args_combiner(*args):
     arg_list = (list(zip(*arg_list)))
     return arg_list
 
+
 def fm_standard_run(subset, save=False, ycol=None, TIMESTEP_IN_HOUR=6, future_steps=6):
     TSData = TimeseriesDataset(tf.tsdf_read_subsets(
         subset, path='E:/Rprojects/zoutindringing-parksluizen/'), ycol)
     rolling_funcs = ('mean', 'min', 'max', 'median', 'std', 'sum')
-    rolling_shifts = (0,1*6,11*6,12*6,23*6,24*6)
-    rolling_window_sizes = (TIMESTEP_IN_HOUR, TIMESTEP_IN_HOUR*2, TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR*24)
-                    # TIMESTEP_IN_HOUR*6, TIMESTEP_IN_HOUR*7, TIMESTEP_IN_HOUR *
-                    # 8, TIMESTEP_IN_HOUR*9, TIMESTEP_IN_HOUR*10,
-                    # TIMESTEP_IN_HOUR*11, TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR *
-                    # 13, TIMESTEP_IN_HOUR*14, TIMESTEP_IN_HOUR*15,
-                    # TIMESTEP_IN_HOUR*16, TIMESTEP_IN_HOUR*17, TIMESTEP_IN_HOUR *
-                    # 18, TIMESTEP_IN_HOUR*19, TIMESTEP_IN_HOUR*20,
-                    # TIMESTEP_IN_HOUR*21, TIMESTEP_IN_HOUR*22, TIMESTEP_IN_HOUR*23, TIMESTEP_IN_HOUR*24)
+    rolling_shifts = (0, 1*6, 11*6, 12*6, 23*6, 24*6)
+    rolling_window_sizes = (
+        TIMESTEP_IN_HOUR, TIMESTEP_IN_HOUR*2, TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR*24)
+    # TIMESTEP_IN_HOUR*6, TIMESTEP_IN_HOUR*7, TIMESTEP_IN_HOUR *
+    # 8, TIMESTEP_IN_HOUR*9, TIMESTEP_IN_HOUR*10,
+    # TIMESTEP_IN_HOUR*11, TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR *
+    # 13, TIMESTEP_IN_HOUR*14, TIMESTEP_IN_HOUR*15,
+    # TIMESTEP_IN_HOUR*16, TIMESTEP_IN_HOUR*17, TIMESTEP_IN_HOUR *
+    # 18, TIMESTEP_IN_HOUR*19, TIMESTEP_IN_HOUR*20,
+    # TIMESTEP_IN_HOUR*21, TIMESTEP_IN_HOUR*22, TIMESTEP_IN_HOUR*23, TIMESTEP_IN_HOUR*24)
 
     # rolling_window_sizes1 = rolling_window_sizes*len(rolling_funcs)
     # rolling_funcs1 = [x for item in rolling_funcs for x in repeat(
     #     item, len(rolling_window_sizes))]
 
-    arg_list = fm_args_combiner(rolling_funcs, rolling_shifts, rolling_window_sizes)
+    arg_list = fm_args_combiner(
+        rolling_funcs, rolling_shifts, rolling_window_sizes)
     rolling_funcs = arg_list[0]
     rolling_shifts = arg_list[1]
     rolling_windows = arg_list[2]
-
-
 
     TSData.fm_exec_func(TSData.fm_time)
 
@@ -71,7 +73,7 @@ def fm_standard_run(subset, save=False, ycol=None, TIMESTEP_IN_HOUR=6, future_st
         arg_dict={'lag': (TIMESTEP_IN_HOUR * 1,)})
     TSData.fm_exec_func(
         TSData.fm_shifted_rolling,
-        arg_dict={'func': rolling_funcs, 'window_size': rolling_windows, 'shift' : rolling_shifts})
+        arg_dict={'func': rolling_funcs, 'window_size': rolling_windows, 'shift': rolling_shifts})
 
     # TSData.ycol = TSData.get_numeric_cols()[0]
     # TSData.rename_ycol('TEMP_OPP')
@@ -166,7 +168,8 @@ class TimeseriesDataset:
         ycol = self.ycol
         col = dataset[ycol].shift(shift).rolling(window_size)
         new_col = fm_window_functions(col, ycol, window_size, func)
-        new_col.name = '_'.join([ycol,'shifted',str(shift),'roll',str(window_size),'func',func])
+        new_col.name = '_'.join([ycol, 'shifted', str(
+            shift), 'roll', str(window_size), 'func', func])
         dataset = pd.concat([dataset, new_col], axis=1)
         self.dataset = dataset
         return self
@@ -217,25 +220,27 @@ class TimeseriesDataset:
                 self.dataset[self.ycol].shift(-i)
 
     def fm_get_streak(self):
-        dataset = self.dataset            
+        dataset = self.dataset
         ycol = self.ycol
         data = dataset
         emptydb = pd.DataFrame()
         emptydb['datetime'] = data['datetime']
-        emptydb['is_active'] = np.where(data[ycol]>0,1,0)
-        emptydb['start'] = emptydb['is_active'].ne(emptydb['is_active'].shift())
+        emptydb['is_active'] = np.where(data[ycol] > 0, 1, 0)
+        emptydb['start'] = emptydb['is_active'].ne(
+            emptydb['is_active'].shift())
         emptydb['id'] = emptydb['start'].cumsum()
         emptydb['count'] = emptydb.groupby('id').cumcount() + 1
-        emptydb['count_on'] = np.where(emptydb['is_active'] == 1,emptydb['count'],0)
-        emptydb['count_off'] = np.where(emptydb['is_active'] == 0,emptydb['count'],0)
-        emptydb.set_index('datetime',drop = True)
-        kept_cols = ['is_active','count_on','count_off']
+        emptydb['count_on'] = np.where(
+            emptydb['is_active'] == 1, emptydb['count'], 0)
+        emptydb['count_off'] = np.where(
+            emptydb['is_active'] == 0, emptydb['count'], 0)
+        emptydb.set_index('datetime', drop=True)
+        kept_cols = ['is_active', 'count_on', 'count_off']
         emptydb = emptydb[kept_cols]
-        dataset = pd.concat([dataset,emptydb],axis=1)
+        dataset = pd.concat([dataset, emptydb], axis=1)
         self.dataset = dataset
         self.emptydb = emptydb
         return self
-
 
     def fm_save(self, format='csv'):
         dataset = self.dataset
@@ -261,10 +266,10 @@ class TimeseriesDataset:
 def main():
     save = False
     TIMESTEP_IN_HOUR = int(60/10)  # How many measurements in 1 hour
-    fm_standard_run(subset = 0, save = save, future_steps = 6*36)
+    fm_standard_run(subset=0, save=save, future_steps=6*36)
     fm_standard_run(subset=1, save=save, future_steps=6*36)
-    fm_standard_run(subset = 2, save = save, future_steps = 6*36)
-    fm_standard_run(subset = 3, save = save, future_steps = 6*36)
+    fm_standard_run(subset=2, save=save, future_steps=6*36)
+    fm_standard_run(subset=3, save=save, future_steps=6*36)
 
 
 if __name__ == '__main__':
