@@ -1,3 +1,4 @@
+from ast import arg
 from unicodedata import numeric
 import pandas as pd
 import numpy as np
@@ -7,20 +8,53 @@ from tsfresh import extract_relevant_features
 from tsfresh import extract_features
 from tsfresh.feature_extraction import MinimalFCParameters
 from itertools import repeat
+import itertools
+
+def fm_window_functions(col, ycol, window_size, func):
+    if func == 'mean':
+        col_val = col.mean()
+    if func == 'min':
+        col_val = col.min()
+    if func == 'max':
+        col_val = col.max()
+    if func == 'sum':
+        col_val = col.sum()
+    if func == 'std':
+        col_val = col.std()
+    if func == 'median':
+        col_val = col.quantile(0.5)
+    return col_val
 
 
-def fm_standard_run(subset, save=False, ycol = None, TIMESTEP_IN_HOUR=6, future_steps = 6):
-    TSData = TimeseriesDataset(tf.tsdf_read_subsets(subset,path='E:/Rprojects/zoutindringing-parksluizen/'),ycol)
+def fm_args_combiner(*args):
+    arg_list = list(itertools.product(*args))
+    arg_list = (list(zip(*arg_list)))
+    return arg_list
+
+def fm_standard_run(subset, save=False, ycol=None, TIMESTEP_IN_HOUR=6, future_steps=6):
+    TSData = TimeseriesDataset(tf.tsdf_read_subsets(
+        subset, path='E:/Rprojects/zoutindringing-parksluizen/'), ycol)
     rolling_funcs = ('mean', 'min', 'max', 'median', 'std', 'sum')
-    rolling_args = (TIMESTEP_IN_HOUR, TIMESTEP_IN_HOUR*2,TIMESTEP_IN_HOUR*3,TIMESTEP_IN_HOUR*4,TIMESTEP_IN_HOUR*5,
-                    TIMESTEP_IN_HOUR*6,TIMESTEP_IN_HOUR*7,TIMESTEP_IN_HOUR*8,TIMESTEP_IN_HOUR*9,TIMESTEP_IN_HOUR*10,
-                    TIMESTEP_IN_HOUR*11,TIMESTEP_IN_HOUR*12,TIMESTEP_IN_HOUR*13,TIMESTEP_IN_HOUR*14,TIMESTEP_IN_HOUR*15,
-                    TIMESTEP_IN_HOUR*16,TIMESTEP_IN_HOUR*17,TIMESTEP_IN_HOUR*18,TIMESTEP_IN_HOUR*19,TIMESTEP_IN_HOUR*20,
-                    TIMESTEP_IN_HOUR*21,TIMESTEP_IN_HOUR*22,TIMESTEP_IN_HOUR*23,TIMESTEP_IN_HOUR*24)
+    rolling_shifts = (0,1*6,11*6,12*6,23*6,24*6)
+    rolling_window_sizes = (TIMESTEP_IN_HOUR, TIMESTEP_IN_HOUR*2, TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR*24)
+                    # TIMESTEP_IN_HOUR*6, TIMESTEP_IN_HOUR*7, TIMESTEP_IN_HOUR *
+                    # 8, TIMESTEP_IN_HOUR*9, TIMESTEP_IN_HOUR*10,
+                    # TIMESTEP_IN_HOUR*11, TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR *
+                    # 13, TIMESTEP_IN_HOUR*14, TIMESTEP_IN_HOUR*15,
+                    # TIMESTEP_IN_HOUR*16, TIMESTEP_IN_HOUR*17, TIMESTEP_IN_HOUR *
+                    # 18, TIMESTEP_IN_HOUR*19, TIMESTEP_IN_HOUR*20,
+                    # TIMESTEP_IN_HOUR*21, TIMESTEP_IN_HOUR*22, TIMESTEP_IN_HOUR*23, TIMESTEP_IN_HOUR*24)
 
-    rolling_args1 = rolling_args*len(rolling_funcs)
-    rolling_funcs1 = [x for item in rolling_funcs for x in repeat(
-        item, len(rolling_args))]
+    # rolling_window_sizes1 = rolling_window_sizes*len(rolling_funcs)
+    # rolling_funcs1 = [x for item in rolling_funcs for x in repeat(
+    #     item, len(rolling_window_sizes))]
+
+    arg_list = fm_args_combiner(rolling_funcs, rolling_shifts, rolling_window_sizes)
+    rolling_funcs = arg_list[0]
+    rolling_shifts = arg_list[1]
+    rolling_windows = arg_list[2]
+
+
 
     TSData.fm_exec_func(TSData.fm_time)
 
@@ -30,32 +64,32 @@ def fm_standard_run(subset, save=False, ycol = None, TIMESTEP_IN_HOUR=6, future_
 
     TSData.fm_exec_func(
         TSData.fm_diff,
-        arg_dict={'lag': (1, 2),
-                  'stepsize': (1, 1)})
+        arg_dict={'lag': (1, 1),
+                  'stepsize': (1, 2)})
     TSData.fm_exec_func(
         TSData.fm_lag,
-        arg_dict={'lag': (TIMESTEP_IN_HOUR * 144,)})
+        arg_dict={'lag': (TIMESTEP_IN_HOUR * 1,)})
     TSData.fm_exec_func(
-        TSData.fm_rolling,
-        arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})
+        TSData.fm_shifted_rolling,
+        arg_dict={'func': rolling_funcs, 'window_size': rolling_windows, 'shift' : rolling_shifts})
 
-    TSData.ycol = TSData.get_numeric_cols()[0]
-    TSData.rename_ycol('TEMP_OPP')
+    # TSData.ycol = TSData.get_numeric_cols()[0]
+    # TSData.rename_ycol('TEMP_OPP')
 
-    TSData.fm_exec_func(
-        TSData.fm_diff,
-        arg_dict={'lag': (1, 2),
-                  'stepsize': (1, 1)})
-    TSData.fm_exec_func(
-        TSData.fm_lag,
-        arg_dict={'lag': (TIMESTEP_IN_HOUR * 2,)})
-    TSData.fm_exec_func(
-        TSData.fm_rolling,
-        arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})
+    # TSData.fm_exec_func(
+    #     TSData.fm_diff,
+    #     arg_dict={'lag': (1, 2),
+    #               'stepsize': (1, 1)})
+    # TSData.fm_exec_func(
+    #     TSData.fm_lag,
+    #     arg_dict={'lag': (TIMESTEP_IN_HOUR * 2,)})
+    # TSData.fm_exec_func(
+    #     TSData.fm_rolling,
+    #     arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})
 
     if save:
         TSData.fm_save(format='parquet')
-        #TSData.fm_create_tsfresh()
+        # TSData.fm_create_tsfresh()
     else:
         pd.set_option('display.max_columns', None)
         print(list(TSData.dataset.columns))
@@ -63,11 +97,11 @@ def fm_standard_run(subset, save=False, ycol = None, TIMESTEP_IN_HOUR=6, future_
 
 class TimeseriesDataset:
 
-    def __init__(self, dataset, ycol = None):
+    def __init__(self, dataset, ycol=None):
         dataset = dataset.set_index(pd.to_datetime(dataset['datetime']))
         self.dataset = dataset
         self.ycol = ycol
-        if isinstance(self.ycol,type(None)):
+        if isinstance(self.ycol, type(None)):
             self.ycol = tp.egv_get_numeric_cols(dataset)[1]
 
     def get_numeric_cols(self):
@@ -97,7 +131,8 @@ class TimeseriesDataset:
         dataset = self.dataset
         ycol = self.ycol
         for i in range(start, lag + 1):
-            dataset[ycol + '_lag_' + str(i)+'_start_'+str(start)] = dataset[ycol].shift(i)
+            dataset[ycol + '_lag_' +
+                    str(i)+'_start_'+str(start)] = dataset[ycol].shift(i)
         self.dataset = dataset
         return self
 
@@ -109,37 +144,30 @@ class TimeseriesDataset:
                 col_val = dataset[ycol].diff(i)
                 for step in range(1, stepsize):
                     col_val = np.diff(col_val.values, prepend=np.nan)
-                dataset[ycol + '_diff_' +
-                        str(stepsize) + '_' + str(i)] = col_val
+                dataset[ycol + '_diff_order_' +
+                        str(stepsize) + '_lag_' + str(i)] = col_val
             else:
-                dataset[ycol + '_diff_' + str(stepsize) + '_' + str(i)
+                dataset[ycol + '_diff_order_' + str(stepsize) + '_lag_' + str(i)
                         ] = dataset[ycol].diff(i)
         self.dataset = dataset
         return self
 
-    def fm_rolling(self, window_size, func='mean'):
+    # def fm_rolling(self, window_size, func='mean'):
+    #     dataset = self.dataset
+    #     ycol = self.ycol
+    #     col_roll = dataset[ycol].rolling(window_size)
+    #     col_val = fm_window_functions(col_roll, ycol, window_size, func)
+    #     dataset = pd.concat([dataset, col_val], axis=1)
+    #     self.dataset = dataset
+    #     return self
+
+    def fm_shifted_rolling(self, window_size=6, shift=0, func='mean'):
         dataset = self.dataset
         ycol = self.ycol
-        col_roll = dataset[ycol].rolling(window_size)
-        if func == 'mean':
-            col_val = col_roll.mean()
-            col_val.name = ycol + '_mean_' + str(window_size)
-        if func == 'min':
-            col_val = col_roll.min()
-            col_val.name = ycol + '_min_' + str(window_size)
-        if func == 'max':
-            col_val = col_roll.max()
-            col_val.name = ycol + '_max_' + str(window_size)
-        if func == 'sum':
-            col_val = col_roll.sum()
-            col_val.name = ycol + '_sum_' + str(window_size)
-        if func == 'std':
-            col_val = col_roll.std()
-            col_val.name = ycol + '_std_' + str(window_size)
-        if func == 'median':
-            col_val = col_roll.quantile(0.5)
-            col_val.name = ycol + '_median_' + str(window_size)
-        dataset = pd.concat([dataset, col_val], axis=1)
+        col = dataset[ycol].shift(shift).rolling(window_size)
+        new_col = fm_window_functions(col, ycol, window_size, func)
+        new_col.name = '_'.join([ycol,'shifted',str(shift),'roll',str(window_size),'func',func])
+        dataset = pd.concat([dataset, new_col], axis=1)
         self.dataset = dataset
         return self
 
@@ -188,6 +216,27 @@ class TimeseriesDataset:
             self.dataset[self.ycol + '_(t+' + str(i)+')'] = \
                 self.dataset[self.ycol].shift(-i)
 
+    def fm_get_streak(self):
+        dataset = self.dataset            
+        ycol = self.ycol
+        data = dataset
+        emptydb = pd.DataFrame()
+        emptydb['datetime'] = data['datetime']
+        emptydb['is_active'] = np.where(data[ycol]>0,1,0)
+        emptydb['start'] = emptydb['is_active'].ne(emptydb['is_active'].shift())
+        emptydb['id'] = emptydb['start'].cumsum()
+        emptydb['count'] = emptydb.groupby('id').cumcount() + 1
+        emptydb['count_on'] = np.where(emptydb['is_active'] == 1,emptydb['count'],0)
+        emptydb['count_off'] = np.where(emptydb['is_active'] == 0,emptydb['count'],0)
+        emptydb.set_index('datetime',drop = True)
+        kept_cols = ['is_active','count_on','count_off']
+        emptydb = emptydb[kept_cols]
+        dataset = pd.concat([dataset,emptydb],axis=1)
+        self.dataset = dataset
+        self.emptydb = emptydb
+        return self
+
+
     def fm_save(self, format='csv'):
         dataset = self.dataset
         start = str(dataset.index[0])[:10]
@@ -209,15 +258,14 @@ class TimeseriesDataset:
                 either 'csv','xlsx' or 'parquet'.")
 
 
-
-
 def main():
-    save = True
+    save = False
     TIMESTEP_IN_HOUR = int(60/10)  # How many measurements in 1 hour
     fm_standard_run(subset = 0, save = save, future_steps = 6*36)
-    fm_standard_run(subset = 1, save = save, future_steps = 6*36)
+    fm_standard_run(subset=1, save=save, future_steps=6*36)
     fm_standard_run(subset = 2, save = save, future_steps = 6*36)
     fm_standard_run(subset = 3, save = save, future_steps = 6*36)
+
 
 if __name__ == '__main__':
     main()

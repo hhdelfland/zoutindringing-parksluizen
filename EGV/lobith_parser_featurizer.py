@@ -27,15 +27,15 @@ def featurize_lobith(lobith_db):
     tsd = fm.TimeseriesDataset(lobith_db,ycol ='lobith_debiet')
     TIMESTEP_IN_HOUR = 6
     rolling_funcs = ('mean', 'min', 'max', 'median', 'std', 'sum')
-    rolling_args = (TIMESTEP_IN_HOUR * 24 ,  TIMESTEP_IN_HOUR * 24 * 2,TIMESTEP_IN_HOUR * 24 * 3,TIMESTEP_IN_HOUR * 24 * 4,TIMESTEP_IN_HOUR * 24 * 5,
-                    TIMESTEP_IN_HOUR * 24 * 6,TIMESTEP_IN_HOUR * 24 * 7,TIMESTEP_IN_HOUR * 24 * 8,TIMESTEP_IN_HOUR * 24 * 9,TIMESTEP_IN_HOUR * 24 * 10,
-                    TIMESTEP_IN_HOUR * 24 * 11,TIMESTEP_IN_HOUR * 24 * 12,TIMESTEP_IN_HOUR * 24 * 13,TIMESTEP_IN_HOUR * 24 * 14,TIMESTEP_IN_HOUR * 24 * 15,
-                    TIMESTEP_IN_HOUR * 24 * 16,TIMESTEP_IN_HOUR * 24 * 17,TIMESTEP_IN_HOUR * 24 * 18,TIMESTEP_IN_HOUR * 24 * 19,TIMESTEP_IN_HOUR * 24 * 20,
-                    TIMESTEP_IN_HOUR * 24 * 21)
+    rolling_shifts = (0,1*24*TIMESTEP_IN_HOUR,2*24*TIMESTEP_IN_HOUR,3*24*TIMESTEP_IN_HOUR,4*24*TIMESTEP_IN_HOUR,
+                      5*24*TIMESTEP_IN_HOUR,6*24*TIMESTEP_IN_HOUR,7*24*TIMESTEP_IN_HOUR,8*24*TIMESTEP_IN_HOUR,
+                      9*24*TIMESTEP_IN_HOUR,10*24*TIMESTEP_IN_HOUR,11*24*TIMESTEP_IN_HOUR,12*24*TIMESTEP_IN_HOUR)
+    rolling_window_sizes = (TIMESTEP_IN_HOUR, TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR*24)
 
-    rolling_args1 = rolling_args*len(rolling_funcs)
-    rolling_funcs1 = [x for item in rolling_funcs for x in repeat(
-        item, len(rolling_args))]
+    arg_list = fm.fm_args_combiner(rolling_funcs, rolling_shifts, rolling_window_sizes)
+    rolling_funcs = arg_list[0]
+    rolling_shifts = arg_list[1]
+    rolling_windows = arg_list[2]
 
 
 
@@ -47,8 +47,8 @@ def featurize_lobith(lobith_db):
     #     tsd.fm_lag,
     #     arg_dict={'lag': (TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24),'start' : (144*3,144*4,144*5,144*6,144*7)})
     tsd.fm_exec_func(
-        tsd.fm_rolling,
-        arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})
+        tsd.fm_shifted_rolling,
+        arg_dict={'func': rolling_funcs, 'window_size': rolling_windows, 'shift': rolling_shifts})
     return tsd.dataset
 
 def save_lobith_feats(lobith_feats):

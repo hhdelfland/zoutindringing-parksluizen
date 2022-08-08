@@ -38,6 +38,10 @@ class MLdata:
         self.lobith_feats = pd.read_parquet('E:\Rprojects\zoutindringing-parksluizen\data_sets\lobith_feats\lobith_feats.parquet')
         return self
 
+    def load_gemaal_feats(self):
+        self.gemaal_feats = pd.read_parquet('E:\Rprojects\zoutindringing-parksluizen\data_sets\gemaal_feats\gemaal_feats.parquet')
+        return self
+
     def combine_datasets(self):
         self.datadict['ALL'] = pd.concat(self.datadict.values()) 
         return self
@@ -55,8 +59,14 @@ class MLdata:
             end_idx = dataset.index[-1]
             self.load_lobith_feats()
             lobith_feats = self.lobith_feats[start_idx:end_idx]
-            # dataset = pd.concat([dataset,lobith_feats],axis=1)
             dataset[lobith_feats.columns] = lobith_feats
+        if 'gemaal_feats' in features:
+            start_idx = dataset.index[0]
+            end_idx = dataset.index[-1]
+            self.load_gemaal_feats()
+            gemaal_feats = self.gemaal_feats[start_idx:end_idx]
+            # dataset = pd.concat([dataset,gemaal_feats],axis=1)
+            dataset[gemaal_feats.columns] = gemaal_feats
         self.dataset = dataset
         return self
 
