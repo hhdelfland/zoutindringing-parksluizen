@@ -7,6 +7,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import *
 from sklearn.metrics import mean_squared_error as mse
 from sklearn.multioutput import MultiOutputRegressor
+from sklearn.preprocessing import StandardScaler
 
 # def mdl_get_feats(index):
 #     files = []
@@ -101,7 +102,13 @@ class MLdata:
         return self
 
     def scale_data(self):
-        pass
+        sc = StandardScaler()
+        x_cols = self.train_x.columns
+        self.test_x_unscaled = self.test_x
+        self.train_x = pd.DataFrame(sc.fit_transform(self.train_x),index= self.train_x.index ,columns = x_cols)
+        self.test_x = pd.DataFrame(sc.transform(self.test_x), index= self.test.index, columns = x_cols)
+        self.scaler = sc
+        return self
 
     def linear_regression(self):
         x = self.train_x
@@ -147,11 +154,12 @@ class MLdata:
     def naive_predictive(self):
         # FIX HARDCODED Y!
         # ZOEK SHIFTS UIT VOOR NAIVE MODEL!!
-
-        x = self.test_x
+        x = self.test_x_unscaled
         y = self.test_y.copy()
         for col in y.columns:
             y[col] = x['EGV_OPP']
+        # for col in y.columns:
+        #     y[col] = x[:,self.x_dataset.columns == 'EGV_OPP']
         return y
 
 
