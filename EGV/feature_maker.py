@@ -1,4 +1,5 @@
 from ast import arg
+from pickle import TRUE
 from unicodedata import numeric
 import pandas as pd
 import numpy as np
@@ -24,6 +25,10 @@ def fm_window_functions(col, ycol, window_size, func):
         col_val = col.std()
     if func == 'median':
         col_val = col.quantile(0.5)
+    if func == 'range':
+        col_val = col.max()-col.min()
+
+
     return col_val
 
 
@@ -36,7 +41,7 @@ def fm_args_combiner(*args):
 def fm_standard_run(subset, save=False, ycol=None, TIMESTEP_IN_HOUR=6, future_steps=6):
     TSData = TimeseriesDataset(tf.tsdf_read_subsets(
         subset, path='E:/Rprojects/zoutindringing-parksluizen/'), ycol)
-    rolling_funcs = ('mean', 'min', 'max', 'median', 'std', 'sum')
+    rolling_funcs = ('mean', 'min', 'max', 'median', 'std', 'sum','range')
     rolling_shifts = (0, 1*6, 11*6, 12*6, 23*6, 24*6)
     rolling_window_sizes = (
         TIMESTEP_IN_HOUR, TIMESTEP_IN_HOUR*2, TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR*24)
@@ -70,13 +75,24 @@ def fm_standard_run(subset, save=False, ycol=None, TIMESTEP_IN_HOUR=6, future_st
                   'stepsize': (1, 2)})
     TSData.fm_exec_func(
         TSData.fm_lag,
-        arg_dict={'lag': (TIMESTEP_IN_HOUR * 1,)})
+        arg_dict={'lag': (TIMESTEP_IN_HOUR * 6,)})
     TSData.fm_exec_func(
         TSData.fm_shifted_rolling,
         arg_dict={'func': rolling_funcs, 'window_size': rolling_windows, 'shift': rolling_shifts})
 
-    # TSData.ycol = TSData.get_numeric_cols()[0]
-    # TSData.rename_ycol('TEMP_OPP')
+    TSData.ycol = TSData.get_numeric_cols()[0]
+    TSData.rename_ycol('TEMP_OPP')
+
+    TSData.fm_exec_func(
+        TSData.fm_diff,
+        arg_dict={'lag': (1, 1),
+                  'stepsize': (1, 2)})
+    TSData.fm_exec_func(
+        TSData.fm_lag,
+        arg_dict={'lag': (TIMESTEP_IN_HOUR * 1,)})
+    TSData.fm_exec_func(
+        TSData.fm_shifted_rolling,
+        arg_dict={'func': rolling_funcs, 'window_size': rolling_windows, 'shift': rolling_shifts})
 
     # TSData.fm_exec_func(
     #     TSData.fm_diff,
@@ -264,7 +280,7 @@ class TimeseriesDataset:
 
 
 def main():
-    save = False
+    save = True
     TIMESTEP_IN_HOUR = int(60/10)  # How many measurements in 1 hour
     fm_standard_run(subset=0, save=save, future_steps=6*36)
     fm_standard_run(subset=1, save=save, future_steps=6*36)

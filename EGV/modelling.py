@@ -1,5 +1,7 @@
 import os
+from tracemalloc import start
 import pandas as pd
+import numpy as np
 import sklearn
 from sklearn.linear_model import LinearRegression
 # from sklearn.linear_model import MultiTaskLassoCV
@@ -8,6 +10,8 @@ from sklearn.linear_model import *
 from sklearn.metrics import mean_squared_error as mse
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.preprocessing import StandardScaler
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+from statsmodels.tools.tools import add_constant
 
 # def mdl_get_feats(index):
 #     files = []
@@ -105,8 +109,11 @@ class MLdata:
         sc = StandardScaler()
         x_cols = self.train_x.columns
         self.test_x_unscaled = self.test_x
-        self.train_x = pd.DataFrame(sc.fit_transform(self.train_x),index= self.train_x.index ,columns = x_cols)
-        self.test_x = pd.DataFrame(sc.transform(self.test_x), index= self.test.index, columns = x_cols)
+        self.train_x_unscaled = self.train_x
+        self.train_x = pd.DataFrame(sc.fit_transform(
+            self.train_x), index=self.train_x.index, columns=x_cols)
+        self.test_x = pd.DataFrame(sc.transform(
+            self.test_x), index=self.test.index, columns=x_cols)
         self.scaler = sc
         return self
 
@@ -145,7 +152,7 @@ class MLdata:
             sk_model = modelfunc(**kwargs).fit(x, y)
         else:
             sk_model = MultiOutputRegressor(
-                modelfunc(**kwargs), n_jobs=-1).fit(x, y)
+                modelfunc(**kwargs)).fit(x, y)
         y_pred = sk_model.predict(self.test_x)
         print(mse(self.test_y, y_pred)**(1/2))
         self.model = sk_model
@@ -162,6 +169,73 @@ class MLdata:
         #     y[col] = x[:,self.x_dataset.columns == 'EGV_OPP']
         return y
 
+    def get_VIF(self, src='self', keep=True):
+        df = self.train_x
+        # if src == 'self':
+        # VIF['feature'] = self.x_dataset.columns
+        VIF = pd.Series(np.linalg.inv(df.corr().to_numpy()).diagonal(),
+                        index=df.columns,
+                        name='VIF')
+        self.VIF = VIF
+        if keep:
+            self.train_x = self.train_x[self.train_x.columns[self.VIF < 10]]
+            self.test_x = self.test_x[self.test_x.columns[self.VIF < 10]]
+            self.test_x_unscaled = self.test_x_unscaled[self.test_x_unscaled.columns[self.VIF < 10]]
+        return self
+
+    def predict_window(self, startdate=False, past=10, target_var='EGV_OPP'):
+        model = self.model
+        if not startdate:
+            startdate = self.test_x.index[0]
+        else:
+            startdate = pd.to_datetime(startdate)
+
+        ranges = self.get_dateranges()
+        if startdate > ranges['train'][0] and startdate < ranges['train'][1]:
+            print('startdate is in train range!, you may see completely or partially fitted predicted values!')
+
+
+        x = pd.concat([self.train_x,self.test_x])
+        x = x[~x.index.duplicated(keep='first')]
+        y_pred = model.predict(x)
+        y_pred_df = pd.DataFrame(y_pred,index = x.index)
+        num_y = y_pred.shape[1]
+        y_pred_sq = y_pred_df.loc[startdate]
+
+
+        # y_pred_sq = y_pred[0:num_y, :].diagonal()
+
+
+        x_measured = self.x_dataset
+
+        start_offset = pd.Timedelta(days=past)
+        end_offset = pd.Timedelta(minutes=num_y*10)
+        xrange = x_measured[startdate-start_offset:startdate+end_offset]
+        comp = pd.DataFrame(xrange[target_var].copy())
+
+        A = ([np.nan]*(comp.shape[0]-num_y))
+        A.extend(y_pred_sq)
+        comp['ypred'] = A
+
+        return comp
+
+    def get_dateranges(self):
+        ranges = {'train': [self.train_x.index[0], self.train_x.index[-1]],
+                  'test': [self.test_x.index[0], self.test_x.index[-1]]
+                  }
+        return ranges
+
+    def get_random_date(self, subset = 'test'):
+        ranges = self.get_dateranges()
+        if subset == 'train':
+            date = self.dataset[ranges['train'][0]:ranges['train'][1]].sample(1).index
+        elif subset == 'test':
+            date = self.dataset[ranges['test'][0]:ranges['test'][1]].sample(1).index
+        elif subset == 'all':
+            date = self.dataset.sample(1).index
+        else:
+            return
+        return date[0]
 
 def main():
     MLdb = MLdata('data_sets/feats')
