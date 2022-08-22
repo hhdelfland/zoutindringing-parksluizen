@@ -1,3 +1,4 @@
+from ast import While
 import os
 from tracemalloc import start
 import pandas as pd
@@ -21,6 +22,8 @@ from statsmodels.tools.tools import add_constant
 #     dataset = pd.read_parquet('data_sets/feats/'+files[index])
 #     dataset = dataset.set_index('datetime', drop=True)
 #     return dataset
+
+
 
 
 class MLdata:
@@ -49,6 +52,11 @@ class MLdata:
             'E:\Rprojects\zoutindringing-parksluizen\data_sets\gemaal_feats\gemaal_feats.parquet')
         return self
 
+    def load_waterstanden_feats(self):
+        self.waterstanden_feats = pd.read_parquet(
+            'E:\Rprojects\zoutindringing-parksluizen\data_sets\waterstanden_feats\waterstanden_feats.parquet')
+        return self
+
     def combine_datasets(self):
         self.datadict['ALL'] = pd.concat(self.datadict.values())
         return self
@@ -74,6 +82,14 @@ class MLdata:
             gemaal_feats = self.gemaal_feats[start_idx:end_idx]
             # dataset = pd.concat([dataset,gemaal_feats],axis=1)
             dataset[gemaal_feats.columns] = gemaal_feats
+        if 'waterstanden_feats' in features:
+            start_idx = dataset.index[0]
+            end_idx = dataset.index[-1]
+            self.load_waterstanden_feats()
+            waterstanden_feats = self.waterstanden_feats[start_idx:end_idx]
+            # dataset = pd.concat([dataset,waterstanden],axis=1)
+            dataset[waterstanden_feats.columns] = waterstanden_feats
+        
         self.dataset = dataset
         return self
 
@@ -181,6 +197,22 @@ class MLdata:
             self.train_x = self.train_x[self.train_x.columns[self.VIF < 10]]
             self.test_x = self.test_x[self.test_x.columns[self.VIF < 10]]
             self.test_x_unscaled = self.test_x_unscaled[self.test_x_unscaled.columns[self.VIF < 10]]
+        return self
+
+    def calc_VIF(self,n = 10):
+        df = self.train_x
+        VIF = pd.Series([10000000])
+        while any(VIF>10):
+            VIF = pd.Series(np.linalg.inv(df.corr().to_numpy()).diagonal(),
+            index=df.columns,
+            name='VIF')
+            drop_cols = list(VIF[VIF>10].sort_values(ascending=False)[:n].index)
+            df = df.drop(drop_cols,axis=1)
+            print(len(df.columns))
+
+        self.train_x = self.train_x[df.columns]
+        self.test_x = self.test_x[df.columns]
+        self.test_x_unscaled = self.test_x_unscaled[df.columns]
         return self
 
     def predict_window(self, startdate=False, past=10, target_var='EGV_OPP'):

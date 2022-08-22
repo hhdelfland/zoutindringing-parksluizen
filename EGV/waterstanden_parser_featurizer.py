@@ -23,7 +23,7 @@ def parse_waterstanden(path='E:\Rprojects\zoutindringing-parksluizen\waterstande
     return db1
 
 def interpolate_gaps(db):
-    pass
+    return db.interpolate()
 
 def report_gaps(db,respective_col= None,size=1):
     if isinstance(respective_col,type(None)):
@@ -40,11 +40,53 @@ def report_gaps(db,respective_col= None,size=1):
             (~mask).cumsum()[mask]).agg(['first', 'size'])
     return(d[d['size'] > size])
 
+def featurize_waterstanden(db):
+    ycols = list(db.columns)
+    ycols.remove('datetime')
+    dbs = []
+    for ycol in ycols:
+        tsd = fm.TimeseriesDataset(db,ycol = ycol)
+        rolling_funcs = ('mean','std','min','max','range')
+        rolling_shifts = (0,6,24*6)
+        rolling_window_size = (6,24*6)
+        arg_list = fm.fm_args_combiner(
+            rolling_funcs,
+            rolling_shifts,
+            rolling_window_size
+        )
+        rolling_funcs, rolling_shifts, rolling_windows = arg_list
+
+        tsd.fm_exec_func(
+            tsd.fm_diff,
+            arg_dict = {'lag': (1,1),
+                        'stepsize': (1,2)}
+        )
+
+        tsd.fm_exec_func(
+            tsd.fm_shifted_rolling,
+            arg_dict={
+                'func' : rolling_funcs,
+                'window_size': rolling_windows,
+                'shift' : rolling_shifts
+            }
+        )
+        dbs.append(tsd.dataset)
+    return pd.concat(dbs,axis=1)
 
 def main():
     db = parse_waterstanden()
     del db['zaayer_stand']
-    print(report_gaps(db))
+    # print(report_gaps(db))
+    db = interpolate_gaps(db)
+    # print(report_gaps(db))
+    db = featurize_waterstanden(db)
+    # del db['datetime']
+    # coln = (list(db.columns))
+    # dups = [n for n in coln if coln.count(n) > 1]
+    # uniq = list(set(dups))
+    # print(uniq)
+    db = db.loc[:,~db.columns.duplicated()]
+
 
 if __name__ == '__main__':
     main()
