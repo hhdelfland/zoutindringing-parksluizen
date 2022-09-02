@@ -10,7 +10,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import *
 from sklearn.metrics import mean_squared_error as mse
 from sklearn.multioutput import MultiOutputRegressor
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler, Normalizer, StandardScaler
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from statsmodels.tools.tools import add_constant
 
@@ -29,6 +29,7 @@ from statsmodels.tools.tools import add_constant
 class MLdata:
     def __init__(self, path):
         self.path = path
+        self.vif_threshold = 10
 
     def load_datasets(self, format='parquet'):
         datadict = {}
@@ -43,19 +44,25 @@ class MLdata:
         return self
 
     def load_lobith_feats(self):
-        self.lobith_feats = pd.read_parquet(
+        feat_data = pd.read_parquet(
             'E:\Rprojects\zoutindringing-parksluizen\data_sets\lobith_feats\lobith_feats.parquet')
-        return self
+        return feat_data
 
     def load_gemaal_feats(self):
-        self.gemaal_feats = pd.read_parquet(
+        feat_data = pd.read_parquet(
             'E:\Rprojects\zoutindringing-parksluizen\data_sets\gemaal_feats\gemaal_feats.parquet')
-        return self
+        return feat_data
 
     def load_waterstanden_feats(self):
-        self.waterstanden_feats = pd.read_parquet(
+        feat_data = pd.read_parquet(
             'E:\Rprojects\zoutindringing-parksluizen\data_sets\waterstanden_feats\waterstanden_feats.parquet')
-        return self
+        return feat_data
+
+    def load_knmi_feats(self):
+        feat_data = pd.read_parquet(
+            'E:\Rprojects\zoutindringing-parksluizen\data_sets\knmi_feats\knmi_feats.parquet' 
+        )
+        return feat_data
 
     def combine_datasets(self):
         self.datadict['ALL'] = pd.concat(self.datadict.values())
@@ -65,33 +72,67 @@ class MLdata:
         keys = list(self.datadict.keys())
         return keys
 
-    def set_dataset(self, key, features=('lobith_feats',)):
+    def set_dataset(self, key, features=('lobith_feats',),mode='full'):
         if isinstance(key, int):
             key = self.get_datasets()[key]
         dataset = self.datadict[key]
-        if 'lobith_feats' in features:
-            start_idx = dataset.index[0]
-            end_idx = dataset.index[-1]
-            self.load_lobith_feats()
-            lobith_feats = self.lobith_feats[start_idx:end_idx]
-            dataset[lobith_feats.columns] = lobith_feats
-        if 'gemaal_feats' in features:
-            start_idx = dataset.index[0]
-            end_idx = dataset.index[-1]
-            self.load_gemaal_feats()
-            gemaal_feats = self.gemaal_feats[start_idx:end_idx]
-            # dataset = pd.concat([dataset,gemaal_feats],axis=1)
-            dataset[gemaal_feats.columns] = gemaal_feats
-        if 'waterstanden_feats' in features:
-            start_idx = dataset.index[0]
-            end_idx = dataset.index[-1]
-            self.load_waterstanden_feats()
-            waterstanden_feats = self.waterstanden_feats[start_idx:end_idx]
-            # dataset = pd.concat([dataset,waterstanden],axis=1)
-            dataset[waterstanden_feats.columns] = waterstanden_feats
-        
+        self.loaded_feats = features
+        start_idx = dataset.index[0]
+        end_idx = dataset.index[-1]
+        if mode == 'full':
+            for lf in features:
+                call = getattr(self,'load_'+lf)
+                feat_data = call()[start_idx:end_idx]
+                dataset[feat_data.columns] = feat_data
+        if mode == 'basic':
+            y_fut_cols = [s for s in dataset.columns if 't+' in s]
+            y_data = dataset[y_fut_cols]
+            dataset = dataset.iloc[:,2:6]
+            dataset = pd.concat([dataset,y_data],axis=1)
+
+            relevant_col_list = {
+                'lobith_feats' : [0,],
+                'knmi_feats' : [1,2,3],
+                'waterstanden_feats' : [1,2,3],
+                'gemaal_feats' : [0,]
+            }
+            for lf in features:
+                call = getattr(self,'load_'+lf)
+                feat_data = call()[start_idx:end_idx]
+                col_idxs = relevant_col_list[lf]
+                feat_data = feat_data.iloc[:,col_idxs]
+                dataset[feat_data.columns] = feat_data        
         self.dataset = dataset
         return self
+
+        # if 'lobith_feats' in features:
+        #     start_idx = dataset.index[0]
+        #     end_idx = dataset.index[-1]
+        #     self = self.load_lobith_feats()
+        #     lobith_feats = self.lobith_feats[start_idx:end_idx]
+        #     dataset[lobith_feats.columns] = lobith_feats
+        # if 'gemaal_feats' in features:
+        #     start_idx = dataset.index[0]
+        #     end_idx = dataset.index[-1]
+        #     self = self.load_gemaal_feats()
+        #     gemaal_feats = self.gemaal_feats[start_idx:end_idx]
+        #     # dataset = pd.concat([dataset,gemaal_feats],axis=1)
+        #     dataset[gemaal_feats.columns] = gemaal_feats
+        # if 'waterstanden_feats' in features:
+        #     start_idx = dataset.index[0]
+        #     end_idx = dataset.index[-1]
+        #     self = self.load_waterstanden_feats()
+        #     waterstanden_feats = self.waterstanden_feats[start_idx:end_idx]
+        #     # dataset = pd.concat([dataset,waterstanden],axis=1)
+        #     dataset[waterstanden_feats.columns] = waterstanden_feats
+        # if 'knmi_feats' in features:
+        #     start_idx = dataset.index[0]
+        #     end_idx = dataset.index[-1]
+        #     self = self.load_knmi_feats()
+        #     knmi_feats = self.knmi_feats[start_idx:end_idx]
+        #     # dataset = pd.concat([dataset,knmi_feats],axis=1)
+        #     dataset[knmi_feats.columns] = knmi_feats
+
 
     def drop_na(self):
         self.dataset = self.dataset.dropna()
@@ -121,15 +162,25 @@ class MLdata:
         self.test_y = y.loc[train_date:]
         return self
 
-    def scale_data(self):
+    def scale_data(self,mode='x',scaler = 'standard'):
         sc = StandardScaler()
+        if scaler == 'normal':
+            sc = Normalizer()
+        if scaler == 'minmax':
+            sc = MinMaxScaler()
         x_cols = self.train_x.columns
+        y_cols = self.train_y.columns
+        self.scale_mode = mode
         self.test_x_unscaled = self.test_x
         self.train_x_unscaled = self.train_x
         self.train_x = pd.DataFrame(sc.fit_transform(
             self.train_x), index=self.train_x.index, columns=x_cols)
         self.test_x = pd.DataFrame(sc.transform(
-            self.test_x), index=self.test.index, columns=x_cols)
+            self.test_x), index=self.test_x.index, columns=x_cols)
+        self.train_y_scaled = pd.DataFrame(sc.fit_transform(
+            self.train_y), index=self.train_y.index, columns=y_cols)
+        self.test_y_scaled = pd.DataFrame(sc.transform(
+            self.test_y), index=self.test_y.index, columns=y_cols)
         self.scaler = sc
         return self
 
@@ -163,6 +214,9 @@ class MLdata:
     def use_model(self, modelfunc, **kwargs):
         x = self.train_x
         y = self.train_y
+        if self.scale_mode == 'y':
+            y = self.train_y_scaled
+
         modeltype = modelfunc()
         if modeltype._get_tags()['multioutput']:
             sk_model = modelfunc(**kwargs).fit(x, y)
@@ -170,6 +224,8 @@ class MLdata:
             sk_model = MultiOutputRegressor(
                 modelfunc(**kwargs)).fit(x, y)
         y_pred = sk_model.predict(self.test_x)
+        if self.scale_mode == 'y':
+            y_pred = self.scaler.inverse_transform(sk_model.predict(self.test_x))
         print(mse(self.test_y, y_pred)**(1/2))
         self.model = sk_model
         return self
@@ -185,7 +241,7 @@ class MLdata:
         #     y[col] = x[:,self.x_dataset.columns == 'EGV_OPP']
         return y
 
-    def get_VIF(self, src='self', keep=True):
+    def get_VIF(self, keep=True):
         df = self.train_x
         # if src == 'self':
         # VIF['feature'] = self.x_dataset.columns
@@ -194,19 +250,19 @@ class MLdata:
                         name='VIF')
         self.VIF = VIF
         if keep:
-            self.train_x = self.train_x[self.train_x.columns[self.VIF < 10]]
-            self.test_x = self.test_x[self.test_x.columns[self.VIF < 10]]
-            self.test_x_unscaled = self.test_x_unscaled[self.test_x_unscaled.columns[self.VIF < 10]]
+            self.train_x = self.train_x[self.train_x.columns[self.VIF < self.vif_threshold]]
+            self.test_x = self.test_x[self.test_x.columns[self.VIF < self.vif_threshold]]
+            self.test_x_unscaled = self.test_x_unscaled[self.test_x_unscaled.columns[self.VIF < self.vif_threshold]]
         return self
 
     def calc_VIF(self,n = 10):
         df = self.train_x
         VIF = pd.Series([10000000])
-        while any(VIF>10):
+        while any(VIF>self.vif_threshold):
             VIF = pd.Series(np.linalg.inv(df.corr().to_numpy()).diagonal(),
             index=df.columns,
             name='VIF')
-            drop_cols = list(VIF[VIF>10].sort_values(ascending=False)[:n].index)
+            drop_cols = list(VIF[VIF>self.vif_threshold].sort_values(ascending=False)[:n].index)
             df = df.drop(drop_cols,axis=1)
             print(len(df.columns))
 
@@ -268,6 +324,8 @@ class MLdata:
         else:
             return
         return date[0]
+
+
 
 def main():
     MLdb = MLdata('data_sets/feats')

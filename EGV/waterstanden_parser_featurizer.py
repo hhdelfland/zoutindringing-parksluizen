@@ -46,7 +46,7 @@ def featurize_waterstanden(db):
     dbs = []
     for ycol in ycols:
         tsd = fm.TimeseriesDataset(db,ycol = ycol)
-        rolling_funcs = ('mean','std','min','max','range')
+        rolling_funcs = ('mean','std','range')
         rolling_shifts = (0,6,24*6)
         rolling_window_size = (6,24*6)
         arg_list = fm.fm_args_combiner(
@@ -86,6 +86,9 @@ def main():
     # uniq = list(set(dups))
     # print(uniq)
     db = db.loc[:,~db.columns.duplicated()]
+    db.to_parquet(
+        'E:\Rprojects\zoutindringing-parksluizen\data_sets\waterstanden_feats\waterstanden_feats.parquet'
+    )
 
 
 if __name__ == '__main__':

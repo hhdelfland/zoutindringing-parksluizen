@@ -31,7 +31,7 @@ def parse_lobith(path):
 def featurize_lobith(lobith_db):
     tsd = fm.TimeseriesDataset(lobith_db, ycol='lobith_debiet')
     TIMESTEP_IN_HOUR = 6
-    rolling_funcs = ('mean', 'min', 'max', 'median', 'std', 'sum')
+    rolling_funcs = ('mean', 'range', 'std')
     rolling_shifts = (0, 1*24*TIMESTEP_IN_HOUR, 2*24*TIMESTEP_IN_HOUR, 3*24*TIMESTEP_IN_HOUR, 4*24*TIMESTEP_IN_HOUR,
                       5*24*TIMESTEP_IN_HOUR, 6*24*TIMESTEP_IN_HOUR, 7 *
                       24*TIMESTEP_IN_HOUR, 8*24*TIMESTEP_IN_HOUR,
@@ -48,7 +48,7 @@ def featurize_lobith(lobith_db):
     tsd.fm_exec_func(
         tsd.fm_diff,
         arg_dict={'lag': (1, 2),
-                  'stepsize': (1, 1)})
+                  'stepsize': (1, 24*6,24*6*2)})
     # tsd.fm_exec_func(
     #     tsd.fm_lag,
     #     arg_dict={'lag': (TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24,TIMESTEP_IN_HOUR * 24),'start' : (144*3,144*4,144*5,144*6,144*7)})
