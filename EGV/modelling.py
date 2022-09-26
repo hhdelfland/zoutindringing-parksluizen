@@ -1,5 +1,6 @@
 from ast import While
 import os
+from tkinter import X
 from tracemalloc import start
 import pandas as pd
 import numpy as np
@@ -163,25 +164,29 @@ class MLdata:
         return self
 
     def scale_data(self,mode='x',scaler = 'standard'):
-        sc = StandardScaler()
+        sc_x = StandardScaler()
+        sc_y = StandardScaler()
         if scaler == 'normal':
-            sc = Normalizer()
+            sc_x = Normalizer()
+            sc_y = Normalizer()
         if scaler == 'minmax':
-            sc = MinMaxScaler()
+            sc_x = MinMaxScaler()
+            sc_y = MinMaxScaler()
         x_cols = self.train_x.columns
         y_cols = self.train_y.columns
         self.scale_mode = mode
         self.test_x_unscaled = self.test_x
         self.train_x_unscaled = self.train_x
-        self.train_x = pd.DataFrame(sc.fit_transform(
+        self.train_x = pd.DataFrame(sc_x.fit_transform(
             self.train_x), index=self.train_x.index, columns=x_cols)
-        self.test_x = pd.DataFrame(sc.transform(
+        self.test_x = pd.DataFrame(sc_x.transform(
             self.test_x), index=self.test_x.index, columns=x_cols)
-        self.train_y_scaled = pd.DataFrame(sc.fit_transform(
+        self.train_y_scaled = pd.DataFrame(sc_y.fit_transform(
             self.train_y), index=self.train_y.index, columns=y_cols)
-        self.test_y_scaled = pd.DataFrame(sc.transform(
+        self.test_y_scaled = pd.DataFrame(sc_y.transform(
             self.test_y), index=self.test_y.index, columns=y_cols)
-        self.scaler = sc
+        self.scaler_x = sc_x
+        self.scaler_y = sc_y
         return self
 
     def linear_regression(self):
@@ -271,41 +276,83 @@ class MLdata:
         self.test_x_unscaled = self.test_x_unscaled[df.columns]
         return self
 
-    def predict_window(self, startdate=False, past=10, target_var='EGV_OPP'):
-        model = self.model
-        if not startdate:
-            startdate = self.test_x.index[0]
-        else:
-            startdate = pd.to_datetime(startdate)
-
-        ranges = self.get_dateranges()
-        if startdate > ranges['train'][0] and startdate < ranges['train'][1]:
-            print('startdate is in train range!, you may see completely or partially fitted predicted values!')
-
-
-        x = pd.concat([self.train_x,self.test_x])
-        x = x[~x.index.duplicated(keep='first')]
-        y_pred = model.predict(x)
-        y_pred_df = pd.DataFrame(y_pred,index = x.index)
-        num_y = y_pred.shape[1]
-        y_pred_sq = y_pred_df.loc[startdate]
-
-
+    def predict_window(self, startdate=False, past=10, target_var='EGV_OPP',model = ''):
+        if model == '':
+            model_predictor = self.model
+            if not startdate:
+                startdate = self.test_x.index[0]
+            else:
+                startdate = pd.to_datetime(startdate)
+            ranges = self.get_dateranges()
+            if startdate > ranges['train'][0] and startdate < ranges['train'][1]:
+                print('startdate is in train range!, you may see completely or partially fitted predicted values!')
+            x = pd.concat([self.train_x,self.test_x])
+            x = x[~x.index.duplicated(keep='first')]
+            y_pred = model_predictor.predict(x)
+            y_pred_df = pd.DataFrame(y_pred,index = x.index)
+            num_y = y_pred.shape[1]
+            y_pred_sq = y_pred_df.loc[startdate]
+        else: #REWRITE
+            model_predictor = model
+            if not startdate:
+                startdate = self.test_x.index[0]
+            else:
+                startdate = pd.to_datetime(startdate)
+            ranges = self.get_dateranges()
+            if startdate > ranges['train'][0] and startdate < ranges['train'][1]:
+                print('startdate is in train range!, you may see completely or partially fitted predicted values!')
+            x = pd.concat([self.train_x,self.test_x])
+            x = x[~x.index.duplicated(keep='first')]
+            y_pred = (model_predictor.predict(np.reshape(np.array(x),(x.shape[0],1,x.shape[1]))))
+            y_pred_df = pd.DataFrame(y_pred,index = x.index)
+            num_y = y_pred.shape[1]
+            y_pred_sq = y_pred_df.loc[startdate]
         # y_pred_sq = y_pred[0:num_y, :].diagonal()
-
-
         x_measured = self.x_dataset
-
         start_offset = pd.Timedelta(days=past)
         end_offset = pd.Timedelta(minutes=num_y*10)
         xrange = x_measured[startdate-start_offset:startdate+end_offset]
         comp = pd.DataFrame(xrange[target_var].copy())
-
         A = ([np.nan]*(comp.shape[0]-num_y))
         A.extend(y_pred_sq)
         comp['ypred'] = A
-
         return comp
+
+    def create_predictions(self):
+        x = pd.concat([self.train_x,self.test_x])
+        x = x[~x.index.duplicated(keep='first')]
+        y_pred = self.model.predict(x)
+        y_pred_df = pd.DataFrame(y_pred,index = x.index)
+        y_pred_df = pd.DataFrame(self.scaler_y.inverse_transform(y_pred_df),index = x.index)
+        self.y_pred_df = y_pred_df
+        return self
+
+    def predict_window2(self,startdate,past = 2,target_var = 'EGV_OPP'):
+        num_y = self.y_pred_df.shape[1]
+        y_pred_sq = self.y_pred_df.loc[startdate]
+        # y_pred_sq = y_pred[0:num_y, :].diagonal()
+        x_measured = self.x_dataset
+        start_offset = pd.Timedelta(days=past)
+        end_offset = pd.Timedelta(minutes=num_y*10)
+        xrange = x_measured[startdate-start_offset:startdate+end_offset]
+        comp = pd.DataFrame(xrange[target_var].copy())
+        A = ([np.nan]*(comp.shape[0]-num_y))
+        A.extend(y_pred_sq)
+        comp['ypred'] = A
+        return comp
+
+    def simulate_live(self,times = 2):
+        random_date = self.get_random_date('test')
+        predictions = []
+        for i in range(0,times):
+            prediction = self.predict_window2(random_date)
+            random_date = random_date + pd.Timedelta(minutes=10)
+            print(random_date)
+            prediction = prediction.rename(columns = {'ypred' : 'ypred' + str(i)})
+            predictions.append(prediction.iloc[:,1])
+        res = pd.concat(predictions,axis=1)
+        res['EGV_OPP'] = self.x_dataset['EGV_OPP'][res.index[0]:res.index[-1]]
+        return res
 
     def get_dateranges(self):
         ranges = {'train': [self.train_x.index[0], self.train_x.index[-1]],

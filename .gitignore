@@ -152,3 +152,4 @@ cython_debug/
 .vscode/settings.json
 .vscode/launch.json
 EGV/test.py
+.Rproj.user
