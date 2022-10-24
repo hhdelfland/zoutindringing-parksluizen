@@ -44,6 +44,35 @@ class MLdata:
         self.datadict = datadict
         return self
 
+    def load_beukelsbrug_data(self, start = '', features = tuple(),format = 'parquet'):
+        for file in os.listdir(self.path):
+            if file.startswith('beukelsbrug'):
+                print('loading beukelsbrug')
+                dataset = pd.read_parquet(self.path+file)
+                if start != '':
+                    dataset = dataset[start:]
+                self.dataset = dataset
+        dataset = self.dataset
+        start_idx = dataset.index[0]
+        end_idx = dataset.index[-1]
+        for lf in features:
+            print(lf)
+            call = getattr(self,'load_'+lf)
+            feat_data = call()[start_idx:end_idx]
+            dataset[feat_data.columns] = feat_data
+        self.dataset = dataset
+        return self
+
+    def load_coolhaven(self):
+        feat_data = pd.read_parquet(
+            r'E:\Rprojects\zoutindringing-parksluizen\data_sets_boezem\features\coolhaven.parquet')
+        return feat_data       
+
+    def load_lage_erf_brug(self):
+        feat_data = pd.read_parquet(
+            r'E:\Rprojects\zoutindringing-parksluizen\data_sets_boezem\features\lage_erf_brug.parquet')
+        return feat_data      
+
     def load_lobith_feats(self):
         feat_data = pd.read_parquet(
             'E:\Rprojects\zoutindringing-parksluizen\data_sets\lobith_feats\lobith_feats.parquet')
@@ -235,13 +264,14 @@ class MLdata:
         self.model = sk_model
         return self
 
-    def naive_predictive(self):
-        # FIX HARDCODED Y!
-        # ZOEK SHIFTS UIT VOOR NAIVE MODEL!!
+    def naive_predictive(self,ycol = ''):
+        if ycol == '':
+            ycol = 'EGV_OPP'
+
         x = self.test_x_unscaled
         y = self.test_y.copy()
         for col in y.columns:
-            y[col] = x['EGV_OPP']
+            y[col] = x[ycol]
         # for col in y.columns:
         #     y[col] = x[:,self.x_dataset.columns == 'EGV_OPP']
         return y
@@ -327,18 +357,34 @@ class MLdata:
         self.y_pred_df = y_pred_df
         return self
 
-    def predict_window2(self,startdate,past = 2,target_var = 'EGV_OPP'):
+    def predict_window2(self,startdate,past = 2,target_var = 'EGV_OPP',stride = 1):
+        ## HOW TO IMPLEMENT STRIDE?!
         num_y = self.y_pred_df.shape[1]
         y_pred_sq = self.y_pred_df.loc[startdate]
         # y_pred_sq = y_pred[0:num_y, :].diagonal()
         x_measured = self.x_dataset
         start_offset = pd.Timedelta(days=past)
-        end_offset = pd.Timedelta(minutes=num_y*10)
+        end_offset = pd.Timedelta(minutes=num_y*stride*10)
         xrange = x_measured[startdate-start_offset:startdate+end_offset]
         comp = pd.DataFrame(xrange[target_var].copy())
-        A = ([np.nan]*(comp.shape[0]-num_y))
-        A.extend(y_pred_sq)
+        # A = ([np.nan]*(int(comp.shape[0])-int(num_y))) # eigenlijk meetpunten in verleden = 2*24*6
+        A = [np.nan] * (int(start_offset/pd.Timedelta(minutes=10)) + 1)
+        # print('len nan: ' + str(len(A)))
+        # print('len num_y: ' + str(num_y))
+        y_pred_sq_empty = [np.nan] * (num_y*stride) 
+        l = y_pred_sq_empty
+        l = [y_pred_sq[(i// stride)] if not i % stride else x for i, x in enumerate(l)]
+        A.extend(l)
+        # A.extend(y_pred_sq) # direct geplakt, geen rekening met stride
+        print('len nan+pred: ' + str(len(A)))
+        # print('y_pred_sq_empty: ' + str(len(y_pred_sq_empty)))
+        # print(comp.shape)
+        # print(l)
+        # print(len(l))
+        # print(A)
         comp['ypred'] = A
+        comp[comp.columns[1]] = comp[comp.columns[1]].shift(stride-1)
+        print(comp.tail(20))
         return comp
 
     def simulate_live(self,times = 2):

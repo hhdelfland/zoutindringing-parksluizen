@@ -116,11 +116,14 @@ def fm_standard_run(subset, save=False, ycol=None, TIMESTEP_IN_HOUR=6, future_st
 class TimeseriesDataset:
 
     def __init__(self, dataset, ycol=None):
-        dataset = dataset.set_index(pd.to_datetime(dataset['datetime']))
+        if type(dataset.index) != pd.core.indexes.datetimes.DatetimeIndex:
+            dataset = dataset.set_index(pd.to_datetime(dataset['datetime']))
         self.dataset = dataset
         self.ycol = ycol
         if isinstance(self.ycol, type(None)):
             self.ycol = tp.egv_get_numeric_cols(dataset)[1]
+        elif isinstance(self.ycol, type(int)):
+            self.ycol = dataset[ycol]
 
     def get_numeric_cols(self):
         return tp.egv_get_numeric_cols(self.dataset)
@@ -230,10 +233,10 @@ class TimeseriesDataset:
             print('Executing: ' + func_name.__name__)
             func_name()
 
-    def fm_create_future_steps(self, steps):
+    def fm_create_future_steps(self, steps, stride = 1):
         for i in range(1, steps+1):
-            self.dataset[self.ycol + '_(t+' + str(i)+')'] = \
-                self.dataset[self.ycol].shift(-i)
+            self.dataset[self.ycol + '_(t+' + str(i*stride)+')'] = \
+                self.dataset[self.ycol].shift(-i*stride)
 
     def fm_get_streak(self):
         dataset = self.dataset
@@ -258,12 +261,15 @@ class TimeseriesDataset:
         self.emptydb = emptydb
         return self
 
-    def fm_save(self, format='csv'):
+    def fm_save(self, path = '' ,format='csv'):
         dataset = self.dataset
         start = str(dataset.index[0])[:10]
         end = str(dataset.index[-1])[:10]
         size = len(dataset)
-        fname = f'data_sets/feats/feats_{start}_{end}_{size}'
+        if path == '':
+            fname = f'data_sets/feats/feats_{start}_{end}_{size}'
+        else:
+            fname = path
         if format == 'csv':
             print('Saving to csv')
             dataset.to_csv(fname + '.csv')

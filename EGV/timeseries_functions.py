@@ -30,19 +30,26 @@ def main():
 
 
 
-def tsdf_report_gaps(tsdf, size=6):
-    numeric_cols = tp.egv_get_numeric_cols(tsdf)
-    respective_col = numeric_cols[1]
-    mask = tsdf[respective_col].isna()
+def tsdf_report_gaps(tsdf, size=6, respective_col=-1):
+    if respective_col == -1:
+        numeric_cols = tp.egv_get_numeric_cols(tsdf)
+        respective_col = numeric_cols[1]
+        mask = tsdf[respective_col].isna()
+    else:
+        mask = tsdf.iloc[:,respective_col].isna()
     d = tsdf.index.to_series()[mask].groupby(
         (~mask).cumsum()[mask]).agg(['first', 'size'])
     return(d[d['size'] > size])
 
 
-def tsdf_interpolate_small_gaps(tsdf, max_gapsize=6):
+def tsdf_interpolate_small_gaps(tsdf, max_gapsize=6, respective_col = -1):
     # src = https://stackoverflow.com/questions/69154946/fill-nan-gaps-in-pandas-df-only-if-gaps-smaller-than-n-nans # noqa
     numeric_cols = tp.egv_get_numeric_cols(tsdf)
-    respective_col = numeric_cols[1]
+    if respective_col == -1:
+        respective_col = numeric_cols[1]
+    else:
+        respective_col = tsdf.columns[respective_col]
+    
     tsdf_interpolated = tsdf[numeric_cols].interpolate()
 
     c = respective_col
