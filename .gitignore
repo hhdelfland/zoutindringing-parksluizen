@@ -6,7 +6,6 @@ Data_EC/
 *.png
 teams_path
 settings.json
-.gitignore
 *.parquet
 
 # Byte-compiled / optimized / DLL files
@@ -148,8 +147,8 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 .vscode/settings.json
-.gitignore
 .vscode/settings.json
 .vscode/launch.json
 EGV/test.py
 .Rproj.user
+EGV/parksluizen_parser_featurizer.py
