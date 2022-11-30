@@ -8,10 +8,10 @@ This project contains the code and data used for an internship graduation invest
 
 ## Disclaimer
 [NL] <br/>
-Dit project en de code is tot stand gekomen in het stageonderzoek van Sjoerd Boeschoten. Het wordt op dit niet gebruikt in formele besluitvorming. 
+Dit project en de code is tot stand gekomen in het stageonderzoek van Sjoerd Boeschoten. Het wordt op dit moment niet gebruikt in formele besluitvorming binnen het Hoogheemraadschap van Delfland. 
 
 [EN] <br/>
-This project and the code has been made within the internship research of Sjoerd Boeschoten. At this moment, it is not used in formal decision making processes.
+This project and the code has been made within the internship research of Sjoerd Boeschoten. At this moment, it is not used in formal decision making processes of Hoogheemraadschap van Delfland.
 
 ## telecontrol_parser.py
 
