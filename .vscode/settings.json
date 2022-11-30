@@ -1,6 +1,0 @@
-{
-    "python.linting.pylintEnabled": false,
-    "python.linting.enabled": true,
-    "python.linting.pycodestyleEnabled": true,
-    "python.pythonPath": "C:\\Users\\Admin\\Anaconda3\\envs\\py36_env\\python.exe"
-}
