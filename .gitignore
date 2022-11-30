@@ -8,6 +8,11 @@ teams_path
 settings.json
 *.parquet
 !img/**.png
+.RData
+.Rhistory
+.vscode
+.Rproj.user
+*.R
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
