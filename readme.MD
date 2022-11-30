@@ -1,8 +1,17 @@
+
+
 # Readme – zoutindringing parksluizen
 
 This project contains the code and data used for an internship graduation investigation into the possibility of using machine learning to create time series predictions for salt infiltration. The project contains multiple modules used to collect and prepare the data. These modules are shown in the scheme below. Jupyter notebooks are used for loading the feature engineered data and for the final analysis / model training
 
 ![code_scheme](img/code_scheme.png)
+
+## Disclaimer
+[NL] <br/>
+Dit project en de code is tot stand gekomen in het stageonderzoek van Sjoerd Boeschoten. Het wordt op dit niet gebruikt in formele besluitvorming. 
+
+[EN] <br/>
+This project and the code has been made within the internship research of Sjoerd Boeschoten. At this moment, it is not used in formal decision making processes.
 
 ## telecontrol_parser.py
 
