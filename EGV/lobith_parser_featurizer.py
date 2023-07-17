@@ -58,17 +58,18 @@ def featurize_lobith(lobith_db):
     return tsd.dataset
 
 
-def save_lobith_feats(lobith_feats):
+def save_lobith_feats(lobith_feats, path):
     del lobith_feats['datetime']
-    lobith_feats.to_parquet(
-        'E:\Rprojects\zoutindringing-parksluizen\data_sets\lobith_feats\lobith_feats.parquet')
+    lobith_feats.to_parquet(path)
 
 
 def main():
     print(os.getcwd())
-    db = parse_lobith('lobith/')
+    import getpass
+    db = parse_lobith(fr'C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\lobith\\')
     db = featurize_lobith(db)
-    save_lobith_feats(db)
+    path = fr'C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\features\lobith_feats\lobith_feats.parquet'
+    save_lobith_feats(db, path)
 
 
 if __name__ == '__main__':

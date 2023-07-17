@@ -5,9 +5,8 @@ import pandas as pd
 import numpy as np
 import telecontrol_parser as tp
 import timeseries_functions as tf
-from tsfresh import extract_relevant_features
-from tsfresh import extract_features
-from tsfresh.feature_extraction import MinimalFCParameters
+# from tsfresh import extract_features
+# from tsfresh.feature_extraction import MinimalFCParameters
 from itertools import repeat
 import itertools
 
@@ -38,9 +37,8 @@ def fm_args_combiner(*args):
     return arg_list
 
 
-def fm_standard_run(subset, save=False, ycol=None, TIMESTEP_IN_HOUR=6, future_steps=6):
-    TSData = TimeseriesDataset(tf.tsdf_read_subsets(
-        subset, path='E:/Rprojects/zoutindringing-parksluizen/'), ycol)
+def fm_standard_run(subset, path, save=False, ycol=None, TIMESTEP_IN_HOUR=6, future_steps=6):
+    TSData = TimeseriesDataset(tf.tsdf_read_subsets(subset, path=path), ycol)
     rolling_funcs = ('mean', 'min', 'max', 'median', 'std', 'sum','range')
     rolling_shifts = (0, 1*6, 11*6, 12*6, 23*6, 24*6)
     rolling_window_sizes = (
@@ -286,12 +284,14 @@ class TimeseriesDataset:
 
 
 def main():
+    import getpass
     save = True
     TIMESTEP_IN_HOUR = int(60/10)  # How many measurements in 1 hour
-    fm_standard_run(subset=0, save=save, future_steps=6*36)
-    fm_standard_run(subset=1, save=save, future_steps=6*36)
-    fm_standard_run(subset=2, save=save, future_steps=6*36)
-    fm_standard_run(subset=3, save=save, future_steps=6*36)
+    path = fr'C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\datadumps\telecontrol\\'
+    fm_standard_run(subset=0, path = path, save=save, future_steps=6*36)
+    fm_standard_run(subset=1, path = path, save=save, future_steps=6*36)
+    fm_standard_run(subset=2, path = path, save=save, future_steps=6*36)
+    fm_standard_run(subset=3, path = path, save=save, future_steps=6*36)
 
 
 if __name__ == '__main__':

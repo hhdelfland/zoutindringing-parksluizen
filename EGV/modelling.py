@@ -14,6 +14,7 @@ from sklearn.multioutput import MultiOutputRegressor
 from sklearn.preprocessing import MinMaxScaler, Normalizer, StandardScaler
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from statsmodels.tools.tools import add_constant
+import getpass
 
 # def mdl_get_feats(index):
 #     files = []
@@ -25,7 +26,7 @@ from statsmodels.tools.tools import add_constant
 #     return dataset
 
 
-
+basefolder_features = fr"C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\features"
 
 class MLdata:
     def __init__(self, path):
@@ -35,12 +36,15 @@ class MLdata:
     def load_datasets(self, format='parquet'):
         datadict = {}
         cnt = 0
-        for file in os.listdir(self.path):
-            if file.startswith('feats_') and file.endswith('.'+format):
-                key = 'dataset_'+str(cnt)+'_'+file.split('_')[3]
-                dataset = pd.read_parquet(self.path+'/'+file)
-                datadict[key] = dataset
-                cnt += 1
+        for subpath, subdirs, files in os.walk(self.path):
+            for file in files:
+                if file.endswith('.'+format):
+                    key = 'dataset_'+str(cnt)+'_'+file.split('_')[0]
+                    print(subpath)
+                    print(file)
+                    dataset = pd.read_parquet(subpath+r'\\'+file)
+                    datadict[key] = dataset
+                    cnt += 1
         self.datadict = datadict
         return self
 
@@ -65,32 +69,32 @@ class MLdata:
 
     def load_coolhaven(self):
         feat_data = pd.read_parquet(
-            r'E:\Rprojects\zoutindringing-parksluizen\data_sets_boezem\features\coolhaven.parquet')
+            r'{basefolder_features}_boezem\features\coolhaven.parquet')
         return feat_data       
 
     def load_lage_erf_brug(self):
         feat_data = pd.read_parquet(
-            r'E:\Rprojects\zoutindringing-parksluizen\data_sets_boezem\features\lage_erf_brug.parquet')
+            rf'{basefolder_features}_boezem\features\lage_erf_brug.parquet')
         return feat_data      
 
     def load_lobith_feats(self):
         feat_data = pd.read_parquet(
-            'E:\Rprojects\zoutindringing-parksluizen\data_sets\lobith_feats\lobith_feats.parquet')
+            rf'{basefolder_features}\lobith_feats\lobith_feats.parquet')
         return feat_data
 
     def load_gemaal_feats(self):
         feat_data = pd.read_parquet(
-            'E:\Rprojects\zoutindringing-parksluizen\data_sets\gemaal_feats\gemaal_feats.parquet')
+            rf'{basefolder_features}\gemaal_feats\gemaal_feats.parquet')
         return feat_data
 
     def load_waterstanden_feats(self):
         feat_data = pd.read_parquet(
-            'E:\Rprojects\zoutindringing-parksluizen\data_sets\waterstanden_feats\waterstanden_feats.parquet')
+            rf'{basefolder_features}\waterstanden_feats\waterstanden_feats.parquet')
         return feat_data
 
     def load_knmi_feats(self):
         feat_data = pd.read_parquet(
-            'E:\Rprojects\zoutindringing-parksluizen\data_sets\knmi_feats\knmi_feats.parquet' 
+            rf'{basefolder_features}\knmi_feats\knmi_feats.parquet' 
         )
         return feat_data
 
@@ -111,8 +115,14 @@ class MLdata:
         end_idx = dataset.index[-1]
         if mode == 'full':
             for lf in features:
-                call = getattr(self,'load_'+lf)
-                feat_data = call()[start_idx:end_idx]
+                print(f"Loading {lf}")
+                data_feature = getattr(self,'load_'+lf)()
+                if not data_feature.index.is_monotonic_increasing:
+                    data_feature = data_feature.sort_index()
+                feat_data = data_feature.iloc[
+                    data_feature.index.get_indexer([start_idx], method='nearest')[0]
+                    :data_feature.index.get_indexer([end_idx], method='nearest')[0]
+                    ]
                 dataset[feat_data.columns] = feat_data
         if mode == 'basic':
             y_fut_cols = [s for s in dataset.columns if 't+' in s]

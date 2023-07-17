@@ -116,6 +116,7 @@ def tsdf_read_subsets(index, path = ''):
     for file in os.listdir(path):
         if file.endswith('.csv'):
             files.append(file)
+    print(files[index])
     dataset = pd.read_csv(path + files[index])
     dataset = dataset.set_index('datetime', drop=False)
     return dataset

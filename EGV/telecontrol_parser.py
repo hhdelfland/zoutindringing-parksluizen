@@ -2,6 +2,7 @@ import pandas as pd
 import os.path
 import numpy as np
 import datetime
+import getpass
 
 
 # TODO
@@ -60,10 +61,7 @@ def egv_make_path(locatie):
     str
         path pointing to telecontrol csv file
     """
-    with open(os.path.dirname(__file__) + '/../teams_path',
-              encoding='utf-8') as file:
-        lines = file.readlines()
-    teams_path = lines[0] + '/'
+    teams_path = fr"C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\datadumps\\"
     path = teams_path + 'telecontrol/'+locatie+'.csv'
     return(path)
 

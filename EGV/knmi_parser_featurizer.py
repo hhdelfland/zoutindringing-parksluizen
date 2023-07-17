@@ -64,7 +64,8 @@ def featurize_knmi(db):
 
 
 def main():
-    db = parse_knmi('E:\Rprojects\zoutindringing-parksluizen\knmi\geulhaven.txt')
+    import getpass
+    db = parse_knmi(fr"C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\knmi\geulhaven.txt")
     db = make_cyclic(db,col = 'DD', max = 360)
     db = combine_vector(db)
     db = featurize_knmi(db)
@@ -73,7 +74,7 @@ def main():
     db = db.resample('10min').mean().interpolate()
     print(db)
     db.to_parquet(
-        'E:\Rprojects\zoutindringing-parksluizen\data_sets\knmi_feats\knmi_feats.parquet'
+        fr'C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\features\knmi_feats\knmi_feats.parquet'
     )
 
 

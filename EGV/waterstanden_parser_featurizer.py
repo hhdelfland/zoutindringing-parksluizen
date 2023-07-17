@@ -3,7 +3,7 @@ import numpy as np
 import feature_maker as fm
 import timeseries_functions as tf
 
-def parse_waterstanden(path='E:\Rprojects\zoutindringing-parksluizen\waterstanden\Buitenwaterstanden.csv'):
+def parse_waterstanden(path):
     db = pd.read_csv(path)
     db['datetime'] = pd.to_datetime(db['Unnamed: 0'])
     db['mins'] = db['datetime'].dt.minute % 10
@@ -74,7 +74,8 @@ def featurize_waterstanden(db):
     return pd.concat(dbs,axis=1)
 
 def main():
-    db = parse_waterstanden()
+    import getpass
+    db = parse_waterstanden(fr"C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\waterstanden\Buitenwaterstanden.csv")
     del db['zaayer_stand']
     # print(report_gaps(db))
     db = interpolate_gaps(db)
@@ -87,7 +88,7 @@ def main():
     # print(uniq)
     db = db.loc[:,~db.columns.duplicated()]
     db.to_parquet(
-        'E:\Rprojects\zoutindringing-parksluizen\data_sets\waterstanden_feats\waterstanden_feats.parquet'
+        fr'C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\features\waterstanden_feats\waterstanden_feats.parquet'
     )
 
 

@@ -2,7 +2,7 @@ import pandas as pd
 import feature_maker as fm
 
 
-def parse_debiet(path='E:\Rprojects\zoutindringing-parksluizen\debiet\DebietParksluizen.csv'):
+def parse_debiet(path):
     db = pd.read_csv(path, skiprows=1)
     db.columns = ('datetime', 'debiet_gemaal', 'kwaliteit')
     db['datetime'] = pd.to_datetime(db['datetime'])
@@ -23,16 +23,17 @@ def featurize_debiet(db):
     return tsd
 
 
-def save_debiet_gemaal_feats(debiet_gemaal_feats):
+def save_debiet_gemaal_feats(debiet_gemaal_feats, path_gemaal_feats):
     del debiet_gemaal_feats['datetime']
-    debiet_gemaal_feats.to_parquet(
-        'E:\Rprojects\zoutindringing-parksluizen\data_sets\gemaal_feats\gemaal_feats.parquet')
+    debiet_gemaal_feats.to_parquet(path_gemaal_feats)
 
 
 def main():
-    db = parse_debiet()
+    import getpass
+    db = parse_debiet(fr"C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\debiet\DebietParksluizen.csv")
     debiet_gemaal_feats = featurize_debiet(db)
-    save_debiet_gemaal_feats(debiet_gemaal_feats.dataset)
+    path_gemaal_feats = fr'C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\features\gemaal_feats\gemaal_feats.parquet'
+    save_debiet_gemaal_feats(debiet_gemaal_feats.dataset, path_gemaal_feats)
 
 
 if __name__ == '__main__':
