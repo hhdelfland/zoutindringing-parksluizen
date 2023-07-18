@@ -27,7 +27,6 @@ def fm_window_functions(col, ycol, window_size, func):
     if func == 'range':
         col_val = col.max()-col.min()
 
-
     return col_val
 
 
@@ -37,9 +36,10 @@ def fm_args_combiner(*args):
     return arg_list
 
 
-def fm_standard_run(subset, path, save=False, ycol=None, TIMESTEP_IN_HOUR=6, future_steps=6):
-    TSData = TimeseriesDataset(tf.tsdf_read_subsets(subset, path=path), ycol)
-    rolling_funcs = ('mean', 'min', 'max', 'median', 'std', 'sum','range')
+def fm_standard_run(subset, path, save_path='', save=False, ycol=None, TIMESTEP_IN_HOUR=6, future_steps=6):
+    tf_read, locatie = tf.tsdf_read_subsets(subset, path=path)
+    TSData = TimeseriesDataset(tf_read, ycol)
+    rolling_funcs = ('mean', 'min', 'max', 'median', 'std', 'sum', 'range')
     rolling_shifts = (0, 1*6, 11*6, 12*6, 23*6, 24*6)
     rolling_window_sizes = (
         TIMESTEP_IN_HOUR, TIMESTEP_IN_HOUR*2, TIMESTEP_IN_HOUR*12, TIMESTEP_IN_HOUR*24)
@@ -104,7 +104,7 @@ def fm_standard_run(subset, path, save=False, ycol=None, TIMESTEP_IN_HOUR=6, fut
     #     arg_dict={'func': rolling_funcs1, 'window_size': rolling_args1})
 
     if save:
-        TSData.fm_save(format='parquet')
+        TSData.fm_save(format='parquet', path=save_path, title=locatie)
         # TSData.fm_create_tsfresh()
     else:
         pd.set_option('display.max_columns', None)
@@ -216,7 +216,7 @@ class TimeseriesDataset:
         return self
 
     def fm_exec_func(self, func_name, arg_dict=None):
-        if not(isinstance(arg_dict, type(None))):
+        if not (isinstance(arg_dict, type(None))):
             vals = list(arg_dict.values())
             length = len(vals[0])
             if all(len(item) == length for item in vals):
@@ -231,7 +231,7 @@ class TimeseriesDataset:
             print('Executing: ' + func_name.__name__)
             func_name()
 
-    def fm_create_future_steps(self, steps, stride = 1):
+    def fm_create_future_steps(self, steps, stride=1):
         for i in range(1, steps+1):
             self.dataset[self.ycol + '_(t+' + str(i*stride)+')'] = \
                 self.dataset[self.ycol].shift(-i*stride)
@@ -259,15 +259,29 @@ class TimeseriesDataset:
         self.emptydb = emptydb
         return self
 
-    def fm_save(self, path = '' ,format='csv'):
+    def fm_save(self, path='', format='csv', title=None):
         dataset = self.dataset
         start = str(dataset.index[0])[:10]
         end = str(dataset.index[-1])[:10]
         size = len(dataset)
+
+        for column in [
+            'Unnamed: 0',
+            'Datum',
+            'Tijd (Europe/Amsterdam)'
+        ]:
+            if column in dataset.columns:
+                print(f"Dropping column: {column}")
+                dataset = dataset.drop(column, axis=1)
+
         if path == '':
             fname = f'data_sets/feats/feats_{start}_{end}_{size}'
         else:
-            fname = path
+            if title is not None:
+                fname = f'{path}/feats_{title}'
+            else:
+                fname = f'{path}/feats_{start}_{end}_{size}'
+
         if format == 'csv':
             print('Saving to csv')
             dataset.to_csv(fname + '.csv')
@@ -276,7 +290,7 @@ class TimeseriesDataset:
             dataset.to_excel(fname + '.xlsx')
         elif format == 'parquet':
             print('Saving to parquet')
-            dataset.to_parquet(fname + '.parquet')
+            dataset.to_parquet(fname + '.parquet', engine='pyarrow')
         else:
             raise ValueError(
                 "Format not supported. Should be \
@@ -287,11 +301,16 @@ def main():
     import getpass
     save = True
     TIMESTEP_IN_HOUR = int(60/10)  # How many measurements in 1 hour
-    path = fr'C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\datadumps\telecontrol\\'
-    fm_standard_run(subset=0, path = path, save=save, future_steps=6*36)
-    fm_standard_run(subset=1, path = path, save=save, future_steps=6*36)
-    fm_standard_run(subset=2, path = path, save=save, future_steps=6*36)
-    fm_standard_run(subset=3, path = path, save=save, future_steps=6*36)
+    path = fr'C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\datadumps\EGV_parsed\\'
+    save_path = fr"C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\features\egv_feats_2"
+    fm_standard_run(subset=0, path=path, save=save,
+                    save_path=save_path, future_steps=6*36)
+    fm_standard_run(subset=1, path=path, save=save,
+                    save_path=save_path, future_steps=6*36)
+    fm_standard_run(subset=2, path=path, save=save,
+                    save_path=save_path, future_steps=6*36)
+    fm_standard_run(subset=3, path=path, save=save,
+                    save_path=save_path, future_steps=6*36)
 
 
 if __name__ == '__main__':

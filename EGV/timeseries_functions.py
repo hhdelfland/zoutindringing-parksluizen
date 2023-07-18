@@ -119,7 +119,7 @@ def tsdf_read_subsets(index, path = ''):
     print(files[index])
     dataset = pd.read_csv(path + files[index])
     dataset = dataset.set_index('datetime', drop=False)
-    return dataset
+    return dataset, files[index][:-4]
 
 
 if __name__ == '__main__':

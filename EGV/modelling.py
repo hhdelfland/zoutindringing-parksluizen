@@ -15,6 +15,7 @@ from sklearn.preprocessing import MinMaxScaler, Normalizer, StandardScaler
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from statsmodels.tools.tools import add_constant
 import getpass
+import datetime
 
 # def mdl_get_feats(index):
 #     files = []
@@ -28,6 +29,7 @@ import getpass
 
 basefolder_features = fr"C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\features"
 
+
 class MLdata:
     def __init__(self, path):
         self.path = path
@@ -40,15 +42,14 @@ class MLdata:
             for file in files:
                 if file.endswith('.'+format):
                     key = 'dataset_'+str(cnt)+'_'+file.split('_')[0]
-                    print(subpath)
-                    print(file)
                     dataset = pd.read_parquet(subpath+r'\\'+file)
+                    print(f"{cnt+1}: {file}")
                     datadict[key] = dataset
                     cnt += 1
         self.datadict = datadict
         return self
 
-    def load_beukelsbrug_data(self, start = '', features = tuple(),format = 'parquet'):
+    def load_beukelsbrug_data(self, start='', features=tuple(), format='parquet'):
         for file in os.listdir(self.path):
             if file.startswith('beukelsbrug'):
                 print('loading beukelsbrug')
@@ -61,21 +62,36 @@ class MLdata:
         end_idx = dataset.index[-1]
         for lf in features:
             print(lf)
-            call = getattr(self,'load_'+lf)
+            call = getattr(self, 'load_'+lf)
             feat_data = call()[start_idx:end_idx]
             dataset[feat_data.columns] = feat_data
         self.dataset = dataset
         return self
 
+    def load_egv_feats(self, format='parquet'):
+        feat_data_list = []
+        for subpath, subdirs, files in os.walk(rf'{basefolder_features}\egv_feats'):
+            for file in files:
+                if file.endswith('.'+format):
+                    data_single = pd.read_parquet(subpath+r'\\'+file)
+                    data_single = data_single[~data_single.index.duplicated(
+                        keep='first')]
+                    data_single = data_single.loc[datetime.datetime(2020,1,1):]  # temporary measure to run locally
+                    feat_data_list.append(data_single)
+
+        feat_data = pd.concat(feat_data_list, axis=1)
+        del feat_data_list
+        return feat_data
+
     def load_coolhaven(self):
         feat_data = pd.read_parquet(
             r'{basefolder_features}_boezem\features\coolhaven.parquet')
-        return feat_data       
+        return feat_data
 
     def load_lage_erf_brug(self):
         feat_data = pd.read_parquet(
             rf'{basefolder_features}_boezem\features\lage_erf_brug.parquet')
-        return feat_data      
+        return feat_data
 
     def load_lobith_feats(self):
         feat_data = pd.read_parquet(
@@ -94,7 +110,7 @@ class MLdata:
 
     def load_knmi_feats(self):
         feat_data = pd.read_parquet(
-            rf'{basefolder_features}\knmi_feats\knmi_feats.parquet' 
+            rf'{basefolder_features}\knmi_feats\knmi_feats.parquet'
         )
         return feat_data
 
@@ -106,7 +122,7 @@ class MLdata:
         keys = list(self.datadict.keys())
         return keys
 
-    def set_dataset(self, key, features=('lobith_feats',),mode='full'):
+    def set_dataset(self, key, features=('lobith_feats',), mode='full'):
         if isinstance(key, int):
             key = self.get_datasets()[key]
         dataset = self.datadict[key]
@@ -116,32 +132,43 @@ class MLdata:
         if mode == 'full':
             for lf in features:
                 print(f"Loading {lf}")
-                data_feature = getattr(self,'load_'+lf)()
+                data_feature = getattr(self, 'load_'+lf)().loc[datetime.datetime(2020,1,1):]
                 if not data_feature.index.is_monotonic_increasing:
                     data_feature = data_feature.sort_index()
                 feat_data = data_feature.iloc[
-                    data_feature.index.get_indexer([start_idx], method='nearest')[0]
-                    :data_feature.index.get_indexer([end_idx], method='nearest')[0]
-                    ]
-                dataset[feat_data.columns] = feat_data
+                    data_feature.index.get_indexer([start_idx], method='nearest')[
+                        0]:data_feature.index.get_indexer([end_idx], method='nearest')[0]
+                ]
+                unique_column_names = set()
+                non_unique_column_names = []
+
+                for column_name in feat_data.columns:
+                    if column_name in unique_column_names:
+                        non_unique_column_names.append(column_name)
+                    else:
+                        unique_column_names.add(column_name)
+                
+                print(f"Lengte niet-unieke kolommen: {len(non_unique_column_names)}")
+                print(f"Totaal aantal kolommen: {len(feat_data.columns)}")
+                dataset.loc[:,feat_data.columns] = feat_data
         if mode == 'basic':
             y_fut_cols = [s for s in dataset.columns if 't+' in s]
             y_data = dataset[y_fut_cols]
-            dataset = dataset.iloc[:,2:6]
-            dataset = pd.concat([dataset,y_data],axis=1)
+            dataset = dataset.iloc[:, 2:6]
+            dataset = pd.concat([dataset, y_data], axis=1)
 
             relevant_col_list = {
-                'lobith_feats' : [0,],
-                'knmi_feats' : [1,2,3],
-                'waterstanden_feats' : [1,2,3],
-                'gemaal_feats' : [0,]
+                'lobith_feats': [0,],
+                'knmi_feats': [1, 2, 3],
+                'waterstanden_feats': [1, 2, 3],
+                'gemaal_feats': [0,]
             }
             for lf in features:
-                call = getattr(self,'load_'+lf)
+                call = getattr(self, 'load_'+lf)
                 feat_data = call()[start_idx:end_idx]
                 col_idxs = relevant_col_list[lf]
-                feat_data = feat_data.iloc[:,col_idxs]
-                dataset[feat_data.columns] = feat_data        
+                feat_data = feat_data.iloc[:, col_idxs]
+                dataset[feat_data.columns] = feat_data
         self.dataset = dataset
         return self
 
@@ -173,7 +200,6 @@ class MLdata:
         #     # dataset = pd.concat([dataset,knmi_feats],axis=1)
         #     dataset[knmi_feats.columns] = knmi_feats
 
-
     def drop_na(self):
         self.dataset = self.dataset.dropna()
         return self
@@ -202,7 +228,7 @@ class MLdata:
         self.test_y = y.loc[train_date:]
         return self
 
-    def scale_data(self,mode='x',scaler = 'standard'):
+    def scale_data(self, mode='x', scaler='standard'):
         sc_x = StandardScaler()
         sc_y = StandardScaler()
         if scaler == 'normal':
@@ -269,12 +295,13 @@ class MLdata:
                 modelfunc(**kwargs)).fit(x, y)
         y_pred = sk_model.predict(self.test_x)
         if self.scale_mode == 'y':
-            y_pred = self.scaler.inverse_transform(sk_model.predict(self.test_x))
+            y_pred = self.scaler.inverse_transform(
+                sk_model.predict(self.test_x))
         print(mse(self.test_y, y_pred)**(1/2))
         self.model = sk_model
         return self
 
-    def naive_predictive(self,ycol = ''):
+    def naive_predictive(self, ycol=''):
         if ycol == '':
             ycol = 'EGV_OPP'
 
@@ -295,20 +322,24 @@ class MLdata:
                         name='VIF')
         self.VIF = VIF
         if keep:
-            self.train_x = self.train_x[self.train_x.columns[self.VIF < self.vif_threshold]]
-            self.test_x = self.test_x[self.test_x.columns[self.VIF < self.vif_threshold]]
-            self.test_x_unscaled = self.test_x_unscaled[self.test_x_unscaled.columns[self.VIF < self.vif_threshold]]
+            self.train_x = self.train_x[self.train_x.columns[self.VIF <
+                                                             self.vif_threshold]]
+            self.test_x = self.test_x[self.test_x.columns[self.VIF <
+                                                          self.vif_threshold]]
+            self.test_x_unscaled = self.test_x_unscaled[
+                self.test_x_unscaled.columns[self.VIF < self.vif_threshold]]
         return self
 
-    def calc_VIF(self,n = 10):
+    def calc_VIF(self, n=10):
         df = self.train_x
         VIF = pd.Series([10000000])
-        while any(VIF>self.vif_threshold):
+        while any(VIF > self.vif_threshold):
             VIF = pd.Series(np.linalg.inv(df.corr().to_numpy()).diagonal(),
-            index=df.columns,
-            name='VIF')
-            drop_cols = list(VIF[VIF>self.vif_threshold].sort_values(ascending=False)[:n].index)
-            df = df.drop(drop_cols,axis=1)
+                            index=df.columns,
+                            name='VIF')
+            drop_cols = list(VIF[VIF > self.vif_threshold].sort_values(
+                ascending=False)[:n].index)
+            df = df.drop(drop_cols, axis=1)
             print(len(df.columns))
 
         self.train_x = self.train_x[df.columns]
@@ -316,7 +347,7 @@ class MLdata:
         self.test_x_unscaled = self.test_x_unscaled[df.columns]
         return self
 
-    def predict_window(self, startdate=False, past=10, target_var='EGV_OPP',model = ''):
+    def predict_window(self, startdate=False, past=10, target_var='EGV_OPP', model=''):
         if model == '':
             model_predictor = self.model
             if not startdate:
@@ -325,14 +356,15 @@ class MLdata:
                 startdate = pd.to_datetime(startdate)
             ranges = self.get_dateranges()
             if startdate > ranges['train'][0] and startdate < ranges['train'][1]:
-                print('startdate is in train range!, you may see completely or partially fitted predicted values!')
-            x = pd.concat([self.train_x,self.test_x])
+                print(
+                    'startdate is in train range!, you may see completely or partially fitted predicted values!')
+            x = pd.concat([self.train_x, self.test_x])
             x = x[~x.index.duplicated(keep='first')]
             y_pred = model_predictor.predict(x)
-            y_pred_df = pd.DataFrame(y_pred,index = x.index)
+            y_pred_df = pd.DataFrame(y_pred, index=x.index)
             num_y = y_pred.shape[1]
             y_pred_sq = y_pred_df.loc[startdate]
-        else: #REWRITE
+        else:  # REWRITE
             model_predictor = model
             if not startdate:
                 startdate = self.test_x.index[0]
@@ -340,11 +372,13 @@ class MLdata:
                 startdate = pd.to_datetime(startdate)
             ranges = self.get_dateranges()
             if startdate > ranges['train'][0] and startdate < ranges['train'][1]:
-                print('startdate is in train range!, you may see completely or partially fitted predicted values!')
-            x = pd.concat([self.train_x,self.test_x])
+                print(
+                    'startdate is in train range!, you may see completely or partially fitted predicted values!')
+            x = pd.concat([self.train_x, self.test_x])
             x = x[~x.index.duplicated(keep='first')]
-            y_pred = (model_predictor.predict(np.reshape(np.array(x),(x.shape[0],1,x.shape[1]))))
-            y_pred_df = pd.DataFrame(y_pred,index = x.index)
+            y_pred = (model_predictor.predict(np.reshape(
+                np.array(x), (x.shape[0], 1, x.shape[1]))))
+            y_pred_df = pd.DataFrame(y_pred, index=x.index)
             num_y = y_pred.shape[1]
             y_pred_sq = y_pred_df.loc[startdate]
         # y_pred_sq = y_pred[0:num_y, :].diagonal()
@@ -359,16 +393,17 @@ class MLdata:
         return comp
 
     def create_predictions(self):
-        x = pd.concat([self.train_x,self.test_x])
+        x = pd.concat([self.train_x, self.test_x])
         x = x[~x.index.duplicated(keep='first')]
         y_pred = self.model.predict(x)
-        y_pred_df = pd.DataFrame(y_pred,index = x.index)
-        y_pred_df = pd.DataFrame(self.scaler_y.inverse_transform(y_pred_df),index = x.index)
+        y_pred_df = pd.DataFrame(y_pred, index=x.index)
+        y_pred_df = pd.DataFrame(
+            self.scaler_y.inverse_transform(y_pred_df), index=x.index)
         self.y_pred_df = y_pred_df
         return self
 
-    def predict_window2(self,startdate,past = 2,target_var = 'EGV_OPP',stride = 1):
-        ## HOW TO IMPLEMENT STRIDE?!
+    def predict_window2(self, startdate, past=2, target_var='EGV_OPP', stride=1):
+        # HOW TO IMPLEMENT STRIDE?!
         num_y = self.y_pred_df.shape[1]
         y_pred_sq = self.y_pred_df.loc[startdate]
         # y_pred_sq = y_pred[0:num_y, :].diagonal()
@@ -381,9 +416,10 @@ class MLdata:
         A = [np.nan] * (int(start_offset/pd.Timedelta(minutes=10)) + 1)
         # print('len nan: ' + str(len(A)))
         # print('len num_y: ' + str(num_y))
-        y_pred_sq_empty = [np.nan] * (num_y*stride) 
+        y_pred_sq_empty = [np.nan] * (num_y*stride)
         l = y_pred_sq_empty
-        l = [y_pred_sq[(i// stride)] if not i % stride else x for i, x in enumerate(l)]
+        l = [y_pred_sq[(i // stride)] if not i %
+             stride else x for i, x in enumerate(l)]
         A.extend(l)
         # A.extend(y_pred_sq) # direct geplakt, geen rekening met stride
         print('len nan+pred: ' + str(len(A)))
@@ -397,16 +433,16 @@ class MLdata:
         print(comp.tail(20))
         return comp
 
-    def simulate_live(self,times = 2):
+    def simulate_live(self, times=2):
         random_date = self.get_random_date('test')
         predictions = []
-        for i in range(0,times):
+        for i in range(0, times):
             prediction = self.predict_window2(random_date)
             random_date = random_date + pd.Timedelta(minutes=10)
             print(random_date)
-            prediction = prediction.rename(columns = {'ypred' : 'ypred' + str(i)})
-            predictions.append(prediction.iloc[:,1])
-        res = pd.concat(predictions,axis=1)
+            prediction = prediction.rename(columns={'ypred': 'ypred' + str(i)})
+            predictions.append(prediction.iloc[:, 1])
+        res = pd.concat(predictions, axis=1)
         res['EGV_OPP'] = self.x_dataset['EGV_OPP'][res.index[0]:res.index[-1]]
         return res
 
@@ -416,18 +452,19 @@ class MLdata:
                   }
         return ranges
 
-    def get_random_date(self, subset = 'test'):
+    def get_random_date(self, subset='test'):
         ranges = self.get_dateranges()
         if subset == 'train':
-            date = self.dataset[ranges['train'][0]:ranges['train'][1]].sample(1).index
+            date = self.dataset[ranges['train'][0]
+                :ranges['train'][1]].sample(1).index
         elif subset == 'test':
-            date = self.dataset[ranges['test'][0]:ranges['test'][1]].sample(1).index
+            date = self.dataset[ranges['test'][0]
+                :ranges['test'][1]].sample(1).index
         elif subset == 'all':
             date = self.dataset.sample(1).index
         else:
             return
         return date[0]
-
 
 
 def main():

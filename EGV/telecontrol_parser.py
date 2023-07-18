@@ -15,7 +15,12 @@ import getpass
 # data select attached series function
 
 def main():
-    egv_db = egv_standard_run(locatie='westland', threshold=24)
+    import getpass
+    basefolder = fr"C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\datadumps\EGV_parsed"
+    for locatie in ['westland', 'parkhaven', 'schiegemaal', 'zaayer']:
+        print(locatie)
+        egv_db = egv_standard_run(locatie=locatie, threshold=24)
+        egv_db.to_csv(f"{basefolder}/{locatie}.csv")
     # egv_inspect_ends(egv_db, 4)
 
 
