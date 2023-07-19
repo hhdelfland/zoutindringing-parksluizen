@@ -409,8 +409,28 @@ class MLdata:
         comp['ypred'] = A
         return comp
 
-    def create_predictions(self):
-        x = pd.concat([self.train_x, self.test_x])
+    def create_predictions(self, dataset='all'):
+        """Create prediction (to self.y_pred_df)
+
+        Parameters
+        ----------
+        dataset : str, optional
+            Which dataset to use, 'train', 'test or 'all' (train and test),
+            by default 'all'
+
+        Returns
+        -------
+        MLdata object
+            self
+        """
+        if dataset == 'train':
+            x = self.train_x
+        elif dataset == 'test':
+            x = self.test_x
+        elif dataset == 'all':
+            x = pd.concat([self.train_x, self.test_x])
+        else:
+            raise ValueError("dataset should be either 'train', 'test' or 'all'")
         x = x[~x.index.duplicated(keep='first')]
         y_pred = self.model.predict(x)
         y_pred_df = pd.DataFrame(y_pred, index=x.index)
@@ -427,7 +447,11 @@ class MLdata:
         x_measured = self.x_dataset
         start_offset = pd.Timedelta(days=past)
         end_offset = pd.Timedelta(minutes=num_y*stride*10)
+        print(len(x_measured))
+        print(start_offset)
+        print(end_offset)
         xrange = x_measured[startdate-start_offset:startdate+end_offset]
+        print(xrange)
         comp = pd.DataFrame(xrange[target_var].copy())
         # A = ([np.nan]*(int(comp.shape[0])-int(num_y))) # eigenlijk meetpunten in verleden = 2*24*6
         A = [np.nan] * (int(start_offset/pd.Timedelta(minutes=10)) + 1)
@@ -445,6 +469,7 @@ class MLdata:
         # print(l)
         # print(len(l))
         # print(A)
+        print(A)
         comp['ypred'] = A
         comp[comp.columns[1]] = comp[comp.columns[1]].shift(stride-1)
         print(comp.tail(20))
