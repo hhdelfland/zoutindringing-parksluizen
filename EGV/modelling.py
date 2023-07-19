@@ -69,19 +69,34 @@ class MLdata:
         return self
 
     def load_egv_feats(self, format='parquet'):
-        feat_data_list = []
+        # feat_data_list = []
+        # for subpath, subdirs, files in os.walk(rf'{basefolder_features}\egv_feats'):
+        #     for file in files:
+        #         if file.endswith('.'+format):
+        #             data_single = pd.read_parquet(subpath+r'\\'+file)
+        #             data_single = data_single[~data_single.index.duplicated(
+        #                 keep='first')]
+        #             data_single = data_single.loc[datetime.datetime(2020,1,1):]  # temporary measure to run locally
+        #             print(file)
+        #             print("Aantal met t+")
+        #             print(sum(data_single.columns.str.contains('t\+')))
+        #             print("Aantal zonder t+")
+        #             print(sum(~data_single.columns.str.contains('t\+')))
+        #             feat_data_list.append(data_single)
+
+        # feat_data = pd.concat(feat_data_list, axis=1)
+        # del feat_data_list
+
         for subpath, subdirs, files in os.walk(rf'{basefolder_features}\egv_feats'):
             for file in files:
-                if file.endswith('.'+format):
+                if file == 'feats_parkhaven.'+format:
+                    print(f"Found {file}")
                     data_single = pd.read_parquet(subpath+r'\\'+file)
                     data_single = data_single[~data_single.index.duplicated(
                         keep='first')]
                     data_single = data_single.loc[datetime.datetime(2020,1,1):]  # temporary measure to run locally
-                    feat_data_list.append(data_single)
-
-        feat_data = pd.concat(feat_data_list, axis=1)
-        del feat_data_list
-        return feat_data
+       
+        return data_single
 
     def load_coolhaven(self):
         feat_data = pd.read_parquet(
@@ -148,9 +163,11 @@ class MLdata:
                     else:
                         unique_column_names.add(column_name)
                 
+                print(sum(feat_data.columns.str.contains('t\+')))
                 print(f"Lengte niet-unieke kolommen: {len(non_unique_column_names)}")
                 print(f"Totaal aantal kolommen: {len(feat_data.columns)}")
-                dataset.loc[:,feat_data.columns] = feat_data
+                print(feat_data.dtypes.value_counts())
+                dataset.loc[:,feat_data.columns] = feat_data  # TODO: weer terugdoen
         if mode == 'basic':
             y_fut_cols = [s for s in dataset.columns if 't+' in s]
             y_data = dataset[y_fut_cols]
