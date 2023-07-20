@@ -68,7 +68,7 @@ class MLdata:
         self.dataset = dataset
         return self
 
-    def load_egv_feats(self, format='parquet'):
+    def load_egv_feats(self, format='parquet', filename='feats_parkhaven'):
         # feat_data_list = []
         # for subpath, subdirs, files in os.walk(rf'{basefolder_features}\egv_feats'):
         #     for file in files:
@@ -89,7 +89,7 @@ class MLdata:
 
         for subpath, subdirs, files in os.walk(rf'{basefolder_features}\egv_feats'):
             for file in files:
-                if file == 'feats_parkhaven.'+format:
+                if file == f'{filename}.'+format:
                     print(f"Found {file}")
                     data_single = pd.read_parquet(subpath+r'\\'+file)
                     data_single = data_single[~data_single.index.duplicated(
@@ -459,6 +459,52 @@ class MLdata:
             self.scaler_y.inverse_transform(y_pred_df), index=x.index)
         self.y_pred_df = y_pred_df
         return self
+    
+    def index_predictions_to_horizon_time(
+            self, 
+            inplace=False, 
+            interval='10T', 
+            return_df = True
+            ):
+        """Create a predictions dataframe where the index
+        represents the time for which the predictions is made,
+        not when the code was (fictionally) run
+
+        Parameters
+        ----------
+        inplace : bool, optional
+            Replace original dataframe (self.y_pred_df). If 
+            False, creates self.y_pred_df_ind_hor, by default False
+        interval : str, optional
+            Interval with strptime behavior, by default '10T' (10 mins)
+        return_df : bool, optional
+            Return the new DataFrame, by default True
+
+        Returns
+        -------
+        pandas.DataFrame
+            The created dataframe
+
+        Raises
+        ------
+        AttributeError
+            If self.y_pred_df doesn't exist (i.e. when `self.create_predictions`)
+            has not yet been successfully run.
+        """
+        if not hasattr(self, 'y_pred_df'):
+            raise AttributeError("`self.create_predictions` not successfully run yet")
+
+        preds = self.y_pred_df.copy()
+        preds = preds.resample(interval).agg('first').fillna(np.nan)
+        for i, column in enumerate(preds):
+            preds.loc[:,column] = preds.loc[:,column].shift(i+1)
+        if inplace:
+            self.y_pred_df = preds
+        else:
+            self.y_pred_df_ind_hor = preds
+        if return_df:
+            return preds
+
 
     def predict_window2(self, startdate, past=2, target_var='EGV_OPP', stride=1):
         # HOW TO IMPLEMENT STRIDE?!
