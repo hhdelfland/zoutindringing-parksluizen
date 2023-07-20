@@ -94,8 +94,7 @@ class MLdata:
                     data_single = pd.read_parquet(subpath+r'\\'+file)
                     data_single = data_single[~data_single.index.duplicated(
                         keep='first')]
-                    data_single = data_single.loc[datetime.datetime(2020,1,1):]  # temporary measure to run locally
-       
+
         return data_single
 
     def load_coolhaven(self):
@@ -137,7 +136,32 @@ class MLdata:
         keys = list(self.datadict.keys())
         return keys
 
-    def set_dataset(self, key, features=('lobith_feats',), mode='full'):
+    def set_dataset(self,
+                    key,
+                    features=('lobith_feats',),
+                    mode='full',
+                    start_time=None,
+                    end_time=None):
+        """Set - but also partly create - dataset for model purposes.
+
+        Parameters
+        ----------
+        key : int
+            Number of data to use as start
+        features : tuple, optional
+            All the data sources to use in dataset, by default ('lobith_feats',)
+        mode : str, optional
+            Use everything ('full') or only partly ('basic'), by default 'full'
+        start_time : datetime.datetime object, optional
+            Start time of dataset to create (if given), by default None
+        end_time : datetime.datetime object, optional
+            End time of dataset to create (if given), by default None
+
+        Returns
+        -------
+        MLdata object
+            self
+        """
         if isinstance(key, int):
             key = self.get_datasets()[key]
         dataset = self.datadict[key]
@@ -147,27 +171,23 @@ class MLdata:
         if mode == 'full':
             for lf in features:
                 print(f"Loading {lf}")
-                data_feature = getattr(self, 'load_'+lf)().loc[datetime.datetime(2020,1,1):]
+                data_feature = getattr(
+                    self, 'load_'+lf)()
+
+                if start_time is not None:
+                    data_feature = data_feature.loc[start_time:]
+                if end_time is not None:
+                    data_feature = data_feature.loc[:end_time]
+
                 if not data_feature.index.is_monotonic_increasing:
                     data_feature = data_feature.sort_index()
                 feat_data = data_feature.iloc[
                     data_feature.index.get_indexer([start_idx], method='nearest')[
                         0]:data_feature.index.get_indexer([end_idx], method='nearest')[0]
                 ]
-                unique_column_names = set()
-                non_unique_column_names = []
 
-                for column_name in feat_data.columns:
-                    if column_name in unique_column_names:
-                        non_unique_column_names.append(column_name)
-                    else:
-                        unique_column_names.add(column_name)
-                
-                print(sum(feat_data.columns.str.contains('t\+')))
-                print(f"Lengte niet-unieke kolommen: {len(non_unique_column_names)}")
-                print(f"Totaal aantal kolommen: {len(feat_data.columns)}")
-                print(feat_data.dtypes.value_counts())
-                dataset.loc[:,feat_data.columns] = feat_data  # TODO: weer terugdoen
+                dataset.loc[:, feat_data.columns] = feat_data
+
         if mode == 'basic':
             y_fut_cols = [s for s in dataset.columns if 't+' in s]
             y_data = dataset[y_fut_cols]
@@ -430,7 +450,8 @@ class MLdata:
         elif dataset == 'all':
             x = pd.concat([self.train_x, self.test_x])
         else:
-            raise ValueError("dataset should be either 'train', 'test' or 'all'")
+            raise ValueError(
+                "dataset should be either 'train', 'test' or 'all'")
         x = x[~x.index.duplicated(keep='first')]
         y_pred = self.model.predict(x)
         y_pred_df = pd.DataFrame(y_pred, index=x.index)

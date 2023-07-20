@@ -11,6 +11,8 @@ import timeseries_functions as tf
 def parse_lobith(path):
     lobith_dbs = {}
     for file in os.listdir(path):
+        if not file.endswith('.csv'):
+            continue
         raw_db = pd.read_csv(path + file, sep=';')
         raw_db['NUMERIEKEWAARDE'] = raw_db['NUMERIEKEWAARDE'].str.replace(
             ',', '.').astype(float)
@@ -66,9 +68,9 @@ def save_lobith_feats(lobith_feats, path):
 def main():
     print(os.getcwd())
     import getpass
-    db = parse_lobith(fr'C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\lobith\\')
+    db = parse_lobith(fr'C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\datadumps\lobith\\')
     db = featurize_lobith(db)
-    path = fr'C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\features\lobith_feats\lobith_feats.parquet'
+    path = fr'C:\Users\{getpass.getuser()}\OneDrive - Hoogheemraadschap van Delfland\3_Projecten\Zoutindringing\Data\features\lobith_feats\lobith_feats_2.parquet'
     save_lobith_feats(db, path)
 
 
