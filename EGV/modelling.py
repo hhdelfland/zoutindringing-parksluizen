@@ -265,15 +265,22 @@ class MLdata:
         self.test_y = y.loc[train_date:]
         return self
 
-    def scale_data(self, mode='x', scaler='standard'):
-        sc_x = StandardScaler()
-        sc_y = StandardScaler()
-        if scaler == 'normal':
-            sc_x = Normalizer()
-            sc_y = Normalizer()
-        if scaler == 'minmax':
-            sc_x = MinMaxScaler()
-            sc_y = MinMaxScaler()
+    def scale_data(self,
+                   mode='x',
+                   scaler='standard',
+                   scalers=None):
+        if scalers is None:
+            if scaler == 'normal':
+                sc_x = Normalizer()
+                sc_y = Normalizer()
+            if scaler == 'minmax':
+                sc_x = MinMaxScaler()
+                sc_y = MinMaxScaler()
+            else:
+                sc_x = StandardScaler()
+                sc_y = StandardScaler()
+        else:
+            sc_x, sc_y = scalers
         x_cols = self.train_x.columns
         y_cols = self.train_y.columns
         self.scale_mode = mode
