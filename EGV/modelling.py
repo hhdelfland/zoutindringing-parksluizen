@@ -251,18 +251,29 @@ class MLdata:
         x_dataset = self.dataset.drop(y_fut_cols, axis=1)
         return (x_dataset, y_dataset)
 
-    def create_train_test_split(self, ratio):
-        train_rows = int(ratio*len(self.dataset))
-        train_date = self.dataset.index[train_rows]
-        self.train = self.dataset.loc[:train_date]
-        self.test = self.dataset.loc[train_date:]
+    def create_train_test_split(self,
+                                ratio=None,
+                                no_split=False,
+                                train_date=None, 
+                                test_date_to=None):
+        if no_split:
+            train_date_from = self.dataset.index[0]
+            train_date_to = self.dataset.index[-1]
+        else:
+            if train_date is None:
+                train_rows = int(ratio*len(self.dataset))
+                train_date = self.dataset.index[train_rows]
+            train_date_from = train_date
+            train_date_to = train_date
+        self.train = self.dataset.loc[:train_date_to]
+        self.test = self.dataset.loc[train_date_from:test_date_to]
         x, y = self.split_predictors()
         self.x_dataset = x
         self.y_dataset = y
-        self.train_x = x.loc[:train_date]
-        self.test_x = x.loc[train_date:]
-        self.train_y = y.loc[:train_date]
-        self.test_y = y.loc[train_date:]
+        self.train_x = x.loc[:train_date_to]
+        self.test_x = x.loc[train_date_from:test_date_to]
+        self.train_y = y.loc[:train_date_to]
+        self.test_y = y.loc[train_date_from:test_date_to]
         return self
 
     def scale_data(self,
